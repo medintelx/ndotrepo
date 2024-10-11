@@ -96,7 +96,7 @@ def login_screen():
 
 
 # Function to initialize the user table in the database
-def init_user_db(DB_NAME):
+def init_user_db():
     conn = sqlite3.connect('NDOTDATA.db')
     cursor = conn.cursor()
     
@@ -116,11 +116,11 @@ def init_user_db(DB_NAME):
     conn.close()
 
 # Call the function to initialize the user table
-init_user_db(os.getenv('DB_NAME'))
+init_user_db()
 
 # Function to add a new user to the database
 def add_user_to_db(name, email, role, active_status):
-    conn = sqlite3.connect(DB_NAME)
+    conn = sqlite3.connect('NDOTDATA.db')
     cursor = conn.cursor()
     
     try:
@@ -136,7 +136,7 @@ def add_user_to_db(name, email, role, active_status):
     conn.close()
 
 def add_leave_to_db(user_id, leave_from, leave_to):
-    conn = sqlite3.connect(DB_NAME)
+    conn = sqlite3.connect('NDOTDATA.db')
     cursor = conn.cursor()
     print(user_id)
     cursor.execute('''
@@ -150,7 +150,7 @@ def add_leave_to_db(user_id, leave_from, leave_to):
 
 # Function to fetch all leaves from the database and handle user IDs correctly
 def fetch_leaves_from_db():
-    conn = sqlite3.connect(DB_NAME)
+    conn = sqlite3.connect('NDOTDATA.db')
     leaves_df = pd.read_sql('''
         SELECT l.id, u.name, l.leave_from, l.leave_to 
         FROM leaves l 
@@ -161,13 +161,13 @@ def fetch_leaves_from_db():
 
 # Function to fetch all users from the database
 def fetch_users_from_db():
-    conn = sqlite3.connect(DB_NAME)
+    conn = sqlite3.connect('NDOTDATA.db')
     users_df = pd.read_sql("SELECT id, name FROM users", conn)
     conn.close()
     return users_df
 
 def add_or_update_holiday(holiday_name, holiday_date):
-    conn = sqlite3.connect(DB_NAME)
+    conn = sqlite3.connect('NDOTDATA.db')
     cursor = conn.cursor()
 
     try:
@@ -184,14 +184,14 @@ def add_or_update_holiday(holiday_name, holiday_date):
     conn.close()
 
 def fetch_holidays_from_db():
-    conn = sqlite3.connect(DB_NAME)
+    conn = sqlite3.connect('NDOTDATA.db')
     holidays_df = pd.read_sql("SELECT * FROM holidays", conn)
     conn.close()
     return holidays_df
 
 # Function to delete a user from the database
 def delete_user_from_db(user_id):
-    conn = sqlite3.connect(DB_NAME)
+    conn = sqlite3.connect('NDOTDATA.db')
     cursor = conn.cursor()
     
     cursor.execute('DELETE FROM users WHERE id = ?', (user_id,))
@@ -202,7 +202,7 @@ def delete_user_from_db(user_id):
 
 # Function to add a new configuration to the database
 def add_config_to_db(AnchorWgt, NonAnchorWgt, MiscWgt, AnchorMaxPoints, NonAnchorMaxPoints, EpicMinEffortPoints):
-    conn = sqlite3.connect(DB_NAME)
+    conn = sqlite3.connect('NDOTDATA.db')
     cursor = conn.cursor()
     
     cursor.execute('''
@@ -216,7 +216,7 @@ def add_config_to_db(AnchorWgt, NonAnchorWgt, MiscWgt, AnchorMaxPoints, NonAncho
 
 # Function to fetch data from the database based on work item type
 def fetch_data_from_db(work_item_type):
-    conn = sqlite3.connect(DB_NAME)
+    conn = sqlite3.connect('NDOTDATA.db')
     query = ""
     
     if work_item_type == "Projects":
@@ -235,7 +235,7 @@ def fetch_data_from_db(work_item_type):
 
 # Function to read tables into DataFrames and perform the joins
 def load_and_join_data():
-    conn = sqlite3.connect(DB_NAME)
+    conn = sqlite3.connect('NDOTDATA.db')
     
     # SQL query to join productbacklogitems, features, epics, and projects
     # SQL query with all fields manually selected and aliased to avoid conflicts
@@ -647,7 +647,7 @@ def main_application():
                 add_user_to_db(name, email, role, active_status)
         
         # Display existing users
-        conn = sqlite3.connect(DB_NAME)
+        conn = sqlite3.connect('NDOTDATA.db')
         users = pd.read_sql("SELECT * FROM users", conn)
         conn.close()
         
