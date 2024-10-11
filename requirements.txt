@@ -1,3 +1,6 @@
 python-dotenv
 plotly
+st_material_table
+streamlit_modal
+streamlit_timeline
 
