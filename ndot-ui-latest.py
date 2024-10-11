@@ -9,7 +9,8 @@ import pandas as pd
 from st_material_table import st_material_table
 import calendar
 from streamlit_modal import Modal
-from streamlit_timeline import st_timeline
+#from streamlit_timeline import st_timeline
+from streamlit_timeline import timeline
 
 # st.markdown("""
 #     <style>
@@ -481,9 +482,10 @@ def main_application():
                 st.write("Project Weightage")
                 with st.container():
                     # Input fields will be stacked vertically inside the container
-                    AnchorWgt = st.number_input("Anchor Weight", min_value=0.0, format="%.2f")
-                    NonAnchorWgt = st.number_input("Non-Anchor Weight", min_value=0.0, format="%.2f")
                     MiscWgt = st.number_input("Miscellaneous Weight", min_value=0.0, format="%.2f")
+                    AnchorWgt = st.number_input("Anchor Weight", min_value=0.0, format="%.2f")
+                    NonAnchorWgt = st.number_input("Non-Anchor Weight", min_value=0.0, format="%.2f", disabled=True)
+                    
                     st.divider()
                     AnchorMaxPoints = st.number_input("Anchor Max Points", min_value=0)
                     NonAnchorMaxPoints = st.number_input("Non-Anchor Max Points", min_value=0)
@@ -498,18 +500,40 @@ def main_application():
                     add_config_to_db(AnchorWgt, NonAnchorWgt, MiscWgt, AnchorMaxPoints, NonAnchorMaxPoints, EpicMinEffortPoints)
         with mcol2:
             st.write("Project Forecast")
-            items = [
-    {"id": 1, "content": "Epic1", "start": "2022-10-20"},
-    {"id": 2, "content": "Epic2", "start": "2022-10-09"},
-    {"id": 3, "content": "Epic3", "start": "2022-10-18"},
-    {"id": 4, "content": "Epic4", "start": "2022-10-16"},
-    {"id": 5, "content": "Epic5", "start": "2022-10-25"},
-    {"id": 6, "content": "Epic6", "start": "2022-10-27"},
-]
-
-            timeline = st_timeline(items, groups=[], options={}, height="300px")
+            items = {
+  "title": {
+  
+  },
+  "events": [
+    {
+      "start_date": {
+        "year": "2020",
+        "month": "1",
+        "day": "1"
+      },
+      "text": {
+        "headline": "Epic 1",
+        "text": "Description of Event 1"
+      }
+    },
+    {
+      "start_date": {
+        "year": "2021",
+        "month": "6",
+        "day": "15"
+      },
+      "text": {
+        "headline": "Epic 2",
+        "text": "Description of Event 2"
+      }
+    }
+  ]
+}
+            timeline(items, height=500)
+           #   timeline = timeline(items, height="300px")
             st.subheader("Epic Status")
-            st.write(timeline)
+            #st.write(timeline)
+            
     elif st.session_state.page == 'Dashboard':
         st.title("Dashboard")
         st.write("Welcome to the Dashboard!")
