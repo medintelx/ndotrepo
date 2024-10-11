@@ -97,7 +97,7 @@ def login_screen():
 
 # Function to initialize the user table in the database
 def init_user_db(DB_NAME):
-    conn = sqlite3.connect(DB_NAME)
+    conn = sqlite3.connect('NDOTDATA.db')
     cursor = conn.cursor()
     
     # Create users table if it doesn't exist
