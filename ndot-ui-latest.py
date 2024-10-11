@@ -96,7 +96,7 @@ def login_screen():
 
 
 # Function to initialize the user table in the database
-def init_user_db():
+def init_user_db(DB_NAME):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     
@@ -116,7 +116,7 @@ def init_user_db():
     conn.close()
 
 # Call the function to initialize the user table
-init_user_db()
+init_user_db(os.getenv('DB_NAME'))
 
 # Function to add a new user to the database
 def add_user_to_db(name, email, role, active_status):
