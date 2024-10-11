@@ -6,7 +6,10 @@ from dotenv import load_dotenv
 import os
 import plotly.graph_objects as go
 import pandas as pd
+from st_material_table import st_material_table
 import calendar
+from streamlit_modal import Modal
+from streamlit_timeline import st_timeline
 
 # st.markdown("""
 #     <style>
@@ -20,7 +23,7 @@ import calendar
 #         .stAppHeader {visibility: hidden;}
 #     </style>
 # """, unsafe_allow_html=True)
-
+st.set_page_config(layout="wide")
 login_css= """
 <style>
 .appview-container {
@@ -81,6 +84,9 @@ def login_screen():
     .st-key-logintext  p {
     color: white;
     }
+    div.st-ah {
+                width: 30%;
+    }
     </style>
     """, unsafe_allow_html=True)
     # Input field for the username
@@ -109,6 +115,16 @@ def init_user_db():
             role TEXT NOT NULL,
             active_status BOOLEAN NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+         # Create leaves table if it doesn't exist
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS leaves (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            leave_from DATE NOT NULL,
+            leave_to DATE NOT NULL,
+            FOREIGN KEY (user_id) REFERENCES users(id)
         )
     ''')
     
@@ -442,167 +458,157 @@ def main_application():
 
     # Based on the selected page, display the corresponding content
     if st.session_state.page == 'Home':
-        st.title("Home Page")
-        st.write("Welcome to the Home Page!")
+      
+        st.markdown("""
+    <style>
+        div.stMainBlockContainer.block-container.st-emotion-cache-1jicfl2.ea3mdgi5 {
+                    padding-top: 1rem !important;
+                    padding-left: 2rem !important;
+                    font-size: 12px;
+        }
+        div.stVerticalBlock.st-emotion-cache-2ajiip.e1f1d6gn2{
+                    gap:0;
+        }
+        dev.stForm.st-emotion-cache-4uzi61.e10yg2by1{
+                    background-color:  #ADD8E6 !important;
+        }
+    </style>
+""", unsafe_allow_html=True)
+        st.title("Forecast")
+        mcol1, mcol2 = st.columns([1, 5])
+        with mcol1:
+            with st.form(key='config_form'):
+                st.write("Project Weightage")
+                with st.container():
+                    # Input fields will be stacked vertically inside the container
+                    AnchorWgt = st.number_input("Anchor Weight", min_value=0.0, format="%.2f")
+                    NonAnchorWgt = st.number_input("Non-Anchor Weight", min_value=0.0, format="%.2f")
+                    MiscWgt = st.number_input("Miscellaneous Weight", min_value=0.0, format="%.2f")
+                    st.divider()
+                    AnchorMaxPoints = st.number_input("Anchor Max Points", min_value=0)
+                    NonAnchorMaxPoints = st.number_input("Non-Anchor Max Points", min_value=0)
+                    st.divider()
+                    EpicMinEffortPoints = st.number_input("Epic Min Effort Points", min_value=0)
+                    
+                # Submit button at the end
+                st.divider()
+                submit_button = st.form_submit_button(label="Forecast")
 
+                if submit_button:
+                    add_config_to_db(AnchorWgt, NonAnchorWgt, MiscWgt, AnchorMaxPoints, NonAnchorMaxPoints, EpicMinEffortPoints)
+        with mcol2:
+            st.write("Project Forecast")
+            items = [
+    {"id": 1, "content": "Epic1", "start": "2022-10-20"},
+    {"id": 2, "content": "Epic2", "start": "2022-10-09"},
+    {"id": 3, "content": "Epic3", "start": "2022-10-18"},
+    {"id": 4, "content": "Epic4", "start": "2022-10-16"},
+    {"id": 5, "content": "Epic5", "start": "2022-10-25"},
+    {"id": 6, "content": "Epic6", "start": "2022-10-27"},
+]
+
+            timeline = st_timeline(items, groups=[], options={}, height="300px")
+            st.subheader("Epic Status")
+            st.write(timeline)
     elif st.session_state.page == 'Dashboard':
         st.title("Dashboard")
         st.write("Welcome to the Dashboard!")
 
     elif st.session_state.page == 'Leaves':
 
-#         st.markdown("""
-#     <style>
-#     /* Main Container */
-#                     /* Full-width section */
-#     .leave-section {
-#         width: 100%;  /* Make the section take full width */
-#         background-color: transparent;  /* Remove the background color */
-#         padding: 0;  /* Remove padding */
-#         box-shadow: none;  /* Remove box shadow */
-#         margin: 0;  /* Remove margin */
-#         border-radius: 0;  /* Remove border radius */
-#     }
-#     .leave-section {
-#         background-color: #f4f7f9;
-#         border-radius: 10px;
-#         padding: 20px;
-#         box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
-#         margin: 20px 0;
-#     }
-
-#     /* Form Elements */
-#     .leave-section input[type="text"], .leave-section input[type="date"], .leave-section select {
-#         width: 100%;
-#         padding: 12px;
-#         margin: 8px 0;
-#         display: inline-block;
-#         border: 1px solid #ccc;
-#         border-radius: 4px;
-#         box-sizing: border-box;
-#         font-size: 16px;
-#         background-color: #fff;
-#         color: #333;
-#     }
-
-#     /* Form Labels */
-#     .leave-section label {
-#         font-weight: bold;
-#         margin-bottom: 5px;
-#         display: block;
-#         color: #0253A4;
-#     }
-
-#     /* Submit Button */
-#     .leave-section .submit-btn {
-#         width: 100%;
-#         background-color: #0253A4;
-#         color: white;
-#         padding: 14px 20px;
-#         margin-top: 10px;
-#         border: none;
-#         border-radius: 4px;
-#         cursor: pointer;
-#         font-size: 18px;
-#         font-weight: bold;
-#         transition: background-color 0.3s ease;
-#     }
-
-#     .leave-section .submit-btn:hover {
-#         background-color: #023C6D;
-#     }
-
-#     /* Titles and Headings */
-#     .leave-section h2 {
-#         font-size: 24px;
-#         font-weight: bold;
-#         color: #0253A4;
-#         margin-bottom: 20px;
-#     }
-
-#     .leave-section h3 {
-#         font-size: 20px;
-#         color: #333;
-#         margin-bottom: 10px;
-#     }
-
-#     /* Table Styling */
-#     .leave-section table {
-#         width: 100%;
-#         border-collapse: collapse;
-#         margin-top: 20px;
-#     }
-
-#     .leave-section table, th, td {
-#         border: 1px solid #ccc;
-#         padding: 12px;
-#         text-align: left;
-#     }
-
-#     .leave-section table th {
-#         background-color: #0253A4;
-#         color: white;
-#         font-weight: bold;
-#     }
-
-#     .leave-section table tr:nth-child(even) {
-#         background-color: #f9f9f9;
-#     }
-
-#     .leave-section table tr:hover {
-#         background-color: #f1f1f1;
-#     }
-
-#     </style>
-# """, unsafe_allow_html=True)
-        # st.markdown('<div class="leave-section">', unsafe_allow_html=True)
+     # Title for Leave Management
         st.title("Leave Management")
 
-        # Create tabs for the Leaves menu
-        tab1, tab2 = st.tabs(["Add Leave", "Total Leaves"])
+        # Create a modal instance
+        modal = Modal(key="add_leave_modal", title="Add Leave")
 
-        # Tab 1: Add Leave
-        with tab1:
-            st.write("### Add Leave")
+        # Add Leave button in the top-right corner
+        add_leave_button = st.button("Add Leave", key="add_leave_button", help="Click to add leave")
 
-            # Fetch all users from the database
-            users_df = fetch_users_from_db()
+        # Show the Total Leaves section
+        st.write("### Total Leaves")
 
-            if not users_df.empty:
-                # Form for adding a leave
-                with st.form(key='leave_form'):
-                    user = st.selectbox("Select User", users_df['name'])
-                    leave_from = st.date_input("Leave From")
-                    leave_to = st.date_input("Leave To")
+        # Fetch and display all leave records
+        leaves_df = fetch_leaves_from_db()
 
-                    submit_button = st.form_submit_button(label="Submit Leave")
+        if not leaves_df.empty:
+            st.write(st_material_table(leaves_df))
+        else:
+            st.write("No leave records found.")
 
-                    if submit_button:
-                        # Get the selected user's ID
-                        user_id = users_df[users_df['name'] == user]['id'].values[0]
-                    
-                        # Add the leave to the database
-                        add_leave_to_db(user_id, leave_from, leave_to)
-                        st.rerun()
+        # Trigger modal when Add Leave button is clicked
+        if add_leave_button:
+            modal.open()
 
-            else:
-                st.write("No users available.")
+        if modal.is_open():
+            with modal.container():
+                
 
-        # Tab 2: Total Leaves
-        with tab2:
-            st.write("### Total Leaves")
+                # Fetch all users from the database
+                users_df = fetch_users_from_db()
 
-            # Fetch and display all leave records
-            leaves_df = fetch_leaves_from_db()
+                if not users_df.empty:
+                    # Form for adding a leave
+                    with st.form(key='leave_form'):
+                        user = st.selectbox("Select User", users_df['name'])
+                        leave_from = st.date_input("Leave From")
+                        leave_to = st.date_input("Leave To")
 
-            if not leaves_df.empty:
-                st.dataframe(leaves_df)
-            else:
-                st.write("No leave records found.")
+                        submit_button = st.form_submit_button(label="Submit Leave")
 
+                        if submit_button:
+                            # Get the selected user's ID
+                            user_id = users_df[users_df['name'] == user]['id'].values[0]
+                            
+                            # Add the leave to the database
+                            add_leave_to_db(user_id, leave_from, leave_to)
+                            st.rerun()
+
+                else:
+                    st.write("No users available.")
     elif st.session_state.page == 'Users':
+        
         st.title("User Management")
-        st.write("Manage users here.")
+        tab1, tab2 = st.tabs(["Create User", "All Users"])
+
+        with tab1:
+            # Create a form for user creation
+            with st.form(key='user_form'):
+                name = st.text_input("Name", max_chars=50)
+                email = st.text_input("Email", max_chars=100)
+                role = st.selectbox("Role", ["Admin", "Viewer", "Editor"])
+                active_status = st.checkbox("Active Status", value=True)
+                
+                # Submit button
+                submit_button = st.form_submit_button(label="Create User")
+                
+                if submit_button:
+                    add_user_to_db(name, email, role, active_status)
+        with tab2:   
+        # Display existing users
+            conn = sqlite3.connect('NDOTDATA.db')
+            users = pd.read_sql("SELECT * FROM users", conn)
+            conn.close()
+            
+            st.subheader("Existing Users")
+            
+            if not users.empty:
+                for index, row in users.iterrows():
+                    col1, col2, col3, col4, col5 = st.columns([2, 3, 3, 2, 1])
+                    
+                    # # Display the user information
+                    # col1.write(row["id"])
+                    col2.write(row["name"])
+                    col3.write(row["email"])
+                    col4.write(row["role"])
+                    
+                    delete_button = col5.button("Del", key=row["id"])
+                    if delete_button:
+                        delete_user_from_db(row["id"])
+                        st.rerun()  # Refresh the app after deletion
+
+            else:
+                st.write("No users found.")
 
     elif st.session_state.page == 'Account':
         st.title("Account Management")
@@ -630,46 +636,46 @@ def main_application():
     #         st.write(f"Displaying {work_item_type} data:")
     #         st.dataframe(data)
 
-    if st.session_state.page == "Leaves":
-        st.title("User Registration")
+    # if st.session_state.page == "Leaves":
+    #     st.title("User Registration")
         
-        # Create a form for user creation
-        with st.form(key='user_form'):
-            name = st.text_input("Name", max_chars=50)
-            email = st.text_input("Email", max_chars=100)
-            role = st.selectbox("Role", ["Admin", "Viewer", "Editor"])
-            active_status = st.checkbox("Active Status", value=True)
+    #     # Create a form for user creation
+    #     with st.form(key='user_form'):
+    #         name = st.text_input("Name", max_chars=50)
+    #         email = st.text_input("Email", max_chars=100)
+    #         role = st.selectbox("Role", ["Admin", "Viewer", "Editor"])
+    #         active_status = st.checkbox("Active Status", value=True)
             
-            # Submit button
-            submit_button = st.form_submit_button(label="Create User")
+    #         # Submit button
+    #         submit_button = st.form_submit_button(label="Create User")
             
-            if submit_button:
-                add_user_to_db(name, email, role, active_status)
+    #         if submit_button:
+    #             add_user_to_db(name, email, role, active_status)
         
-        # Display existing users
-        conn = sqlite3.connect('NDOTDATA.db')
-        users = pd.read_sql("SELECT * FROM users", conn)
-        conn.close()
+    #     # Display existing users
+    #     conn = sqlite3.connect('NDOTDATA.db')
+    #     users = pd.read_sql("SELECT * FROM users", conn)
+    #     conn.close()
         
-        st.subheader("Existing Users")
+    #     st.subheader("Existing Users")
         
-        if not users.empty:
-            for index, row in users.iterrows():
-                col1, col2, col3, col4, col5 = st.columns([2, 3, 3, 2, 1])
+    #     if not users.empty:
+    #         for index, row in users.iterrows():
+    #             col1, col2, col3, col4, col5 = st.columns([2, 3, 3, 2, 1])
                 
-                # Display the user information
-                col1.write(row["id"])
-                col2.write(row["name"])
-                col3.write(row["email"])
-                col4.write(row["role"])
+    #             # Display the user information
+    #             col1.write(row["id"])
+    #             col2.write(row["name"])
+    #             col3.write(row["email"])
+    #             col4.write(row["role"])
                 
-                delete_button = col5.button("Del", key=row["id"])
-                if delete_button:
-                    delete_user_from_db(row["id"])
-                    st.experimental_rerun()  # Refresh the app after deletion
+    #             delete_button = col5.button("Del", key=row["id"])
+    #             if delete_button:
+    #                 delete_user_from_db(row["id"])
+    #                 st.experimental_rerun()  # Refresh the app after deletion
 
-        else:
-            st.write("No users found.")
+    #     else:
+    #         st.write("No users found.")
     # elif menu == "Config":
     #     st.title("Weightage Configurations")
 
