@@ -4,4 +4,6 @@ st_material_table
 setuptools
 streamlit_modal
 streamlit-vis-timeline
+streamlit-timeline
+
 
