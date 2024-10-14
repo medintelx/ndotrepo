@@ -5,5 +5,6 @@ setuptools
 streamlit_modal
 streamlit-vis-timeline
 streamlit-timeline
+streamlit-aggrid
 
 
