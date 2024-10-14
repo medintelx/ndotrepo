@@ -11,6 +11,13 @@ import calendar
 from streamlit_modal import Modal
 #from streamlit_timeline import st_timeline
 from streamlit_timeline import timeline
+from st_aggrid import AgGrid
+import pandas as pd
+
+
+@st.cache_data
+def get_data():
+    return pd.read_json("https://www.ag-grid.com/example-assets/olympic-winners.json")
 
 # st.markdown("""
 #     <style>
@@ -409,18 +416,23 @@ def main_application():
         <style>
          /* Adjust the sidebar width */
         [data-testid="stSidebar"] {
-            background-color: #ADD8E6;
-            min-width: 140px;  /* Set the minimum width for the sidebar */
+            background-color: #ADD8E6; 
+           /* background: rgb(2,0,36);
+            background: linear-gradient(90deg, rgba(2,0,36,1) 0%, rgba(9,9,121,1) 0%, rgba(7,59,154,1) 0%, rgba(11,78,149,1) 11%, rgba(35,128,201,1) 65%, rgba(0,212,255,1) 100%);
+          */  min-width: 140px;  /* Set the minimum width for the sidebar */
             max-width: 140px;  /* Set the maximum width for the sidebar */
         }
         [data-testid="stButton"] {
-            background-color: #ADD8E6;
+           background-color: #ADD8E6; 
+              border-radius: 50px; 
+             width: 100%; 
             border-size: none;
             min-width: 130px;  /* Set the minimum width for the sidebar */
             max-width: 130px;  /* Set the maximum width for the sidebar */
         }
-        [data-testid="stButton"]  button {
+       [data-testid="stButton"]  button {
         background-color: #ADD8E6;
+        border-radius: 50px; 
          border: none;
         }
         .menu-button {
@@ -452,8 +464,8 @@ def main_application():
         st.session_state.page = 'Leaves'
     if st.sidebar.button('👤 Users', key='users'):
         st.session_state.page = 'Users'
-    if st.sidebar.button('🏦 Account', key='account'):
-        st.session_state.page = 'Account'
+    if st.sidebar.button('🏦 Holidays', key='holiday'):
+        st.session_state.page = 'Holidays'
     if st.sidebar.button('⚙️ Settings', key='settings'):
         st.session_state.page = 'Settings'
 
@@ -475,70 +487,99 @@ def main_application():
         }
     </style>
 """, unsafe_allow_html=True)
+        st.markdown(""" <style>
+                    h1#forecast {
+                    color: #ADD8E6;
+                    font-size: 24px;
+                    }
+                    [data-testid="stVerticalBlock"] {
+                    font-size: 10px;
+                    }
+                    button.st-emotion-cache-1vt4y43.ef3psqc16{
+                    width:100%;
+                    }
+                    .custom-form {
+        border: 2px solid #4CAF50;
+                     background-color: #f0f8ff;
+        padding: 0px;
+        border-radius: 10px;
+        margin-top: 20px;
+    }
+                    [data-testid="stForm"]{
+                    background-color: #ADD8E6;
+                    
+                    }
+             
+                    </style>
+                    """, unsafe_allow_html=True)
         st.title("Forecast")
         mcol1, mcol2 = st.columns([1, 5])
         with mcol1:
+            # Create the form inside a div with the custom class
             with st.form(key='config_form'):
-                st.write("Project Weightage")
+                st.markdown('<div class="custom-form">', unsafe_allow_html=True)
+                #st.write("Project Weightage")
                 with st.container():
+                    with st.popover("Type Weights"):
                     # Input fields will be stacked vertically inside the container
-                    MiscWgt = st.number_input("Miscellaneous Weight", min_value=0.0, format="%.2f")
-                    AnchorWgt = st.number_input("Anchor Weight", min_value=0.0, format="%.2f")
-                    NonAnchorWgt = st.number_input("Non-Anchor Weight", min_value=0.0, format="%.2f", disabled=True)
-                    
+                        MiscWgt = st.number_input("Miscellaneous Weight", min_value=0.0, format="%.2f")
+                        AnchorWgt = st.number_input("Anchor Weight", min_value=0.0, format="%.2f")
+                        NonAnchorWgt = st.number_input("Non-Anchor Weight", min_value=0.0, format="%.2f", disabled=True)
                     st.divider()
-                    AnchorMaxPoints = st.number_input("Anchor Max Points", min_value=0)
-                    NonAnchorMaxPoints = st.number_input("Non-Anchor Max Points", min_value=0)
+                    with st.popover("Max Points "):                     
+                        AnchorMaxPoints = st.number_input("Anchor Max Points", min_value=0)
+                        NonAnchorMaxPoints = st.number_input("Non-Anchor Max Points", min_value=0)
                     st.divider()
-                    EpicMinEffortPoints = st.number_input("Epic Min Effort Points", min_value=0)
+                    with st.popover("Min Points "):   
+                        EpicMinEffortPoints = st.number_input("Epic Min Effort Points", min_value=0)
                     
                 # Submit button at the end
                 st.divider()
                 submit_button = st.form_submit_button(label="Forecast")
-
+                st.markdown('</div>', unsafe_allow_html=True)
                 if submit_button:
                     add_config_to_db(AnchorWgt, NonAnchorWgt, MiscWgt, AnchorMaxPoints, NonAnchorMaxPoints, EpicMinEffortPoints)
+        # Create the form inside a div with the custom class
         with mcol2:
-            st.write("Project Forecast")
-            items = {
-  "title": {
-  
-  },
-  "events": [
-    {
-      "start_date": {
-        "year": "2020",
-        "month": "1",
-        "day": "1"
-      },
-      "text": {
-        "headline": "Epic 1",
-        "text": "Description of Event 1"
-      }
-    },
-    {
-      "start_date": {
-        "year": "2021",
-        "month": "6",
-        "day": "15"
-      },
-      "text": {
-        "headline": "Epic 2",
-        "text": "Description of Event 2"
-      }
-    }
-  ]
-}
-            timeline(items, height=500)
-           #   timeline = timeline(items, height="300px")
-            st.subheader("Epic Status")
-            #st.write(timeline)
+          #  st.write("Project Forecast")
+            df = fetch_data_from_db("Projects")
+            df = df[["Title", "State", "Anchor_Project", "Priority_Traffic_Ops","Fiscal_Year","Funding_Source","Route_Type","Scoping_30_Percent","SeventyFivePercentComplete","Intermediate_Date","QAQC_Submittal_Date","Document_Submittal_Date"]]
+    
+
+
+
+            tabs = st.tabs(["Projects"])
+        
+            with tabs[0]:
+                grid_return = AgGrid(df)
+
+                #st.write(grid_return)
             
     elif st.session_state.page == 'Dashboard':
         st.title("Dashboard")
         st.write("Welcome to the Dashboard!")
 
     elif st.session_state.page == 'Leaves':
+        st.markdown(""" <style>
+                    h1#leave-management {
+                    color: #ADD8E6;
+                    font-size: 24px;
+                    }
+                   
+                     div.stMainBlockContainer.block-container.st-emotion-cache-1jicfl2.ea3mdgi5 {
+                    padding-top: 1rem !important;
+                    padding-left: 2rem !important;
+                    font-size: 12px;
+        }
+        div.stVerticalBlock.st-emotion-cache-2ajiip.e1f1d6gn2{
+                    gap:0;
+        }
+        dev.stForm.st-emotion-cache-4uzi61.e10yg2by1{
+                    background-color:  #ADD8E6 !important;
+        }
+                    }
+                    </style>
+                    """, unsafe_allow_html=True)
 
      # Title for Leave Management
         st.title("Leave Management")
@@ -554,9 +595,10 @@ def main_application():
 
         # Fetch and display all leave records
         leaves_df = fetch_leaves_from_db()
-
+        leaves_df = leaves_df[["name","leave_from","leave_to"]]
         if not leaves_df.empty:
-            st.write(st_material_table(leaves_df))
+            grid_return = AgGrid(leaves_df,fit_columns_on_grid_load=True )
+
         else:
             st.write("No leave records found.")
 
@@ -591,7 +633,26 @@ def main_application():
                 else:
                     st.write("No users available.")
     elif st.session_state.page == 'Users':
-        
+        st.markdown(""" <style>
+                    h1#user-management {
+                    color: #ADD8E6;
+                    font-size: 24px;
+                    }
+                   
+                     div.stMainBlockContainer.block-container.st-emotion-cache-1jicfl2.ea3mdgi5 {
+                    padding-top: 1rem !important;
+                    padding-left: 2rem !important;
+                    font-size: 12px;
+        }
+        div.stVerticalBlock.st-emotion-cache-2ajiip.e1f1d6gn2{
+                    gap:0;
+        }
+        dev.stForm.st-emotion-cache-4uzi61.e10yg2by1{
+                    background-color:  #ADD8E6 !important;
+        }
+                    }
+                    </style>
+                    """, unsafe_allow_html=True)
         st.title("User Management")
         tab1, tab2 = st.tabs(["Create User", "All Users"])
 
@@ -634,9 +695,96 @@ def main_application():
             else:
                 st.write("No users found.")
 
-    elif st.session_state.page == 'Account':
-        st.title("Account Management")
-        st.write("Manage your account settings.")
+    elif st.session_state.page == 'Holidays':
+        st.markdown(""" <style>
+        div.stMainBlockContainer.block-container.st-emotion-cache-1jicfl2.ea3mdgi5 {
+                    padding-top: 1rem !important;
+                    padding-left: 2rem !important;
+                    font-size: 12px;
+        }
+        div.stVerticalBlock.st-emotion-cache-2ajiip.e1f1d6gn2{
+                    gap:0;
+        }
+        dev.stForm.st-emotion-cache-4uzi61.e10yg2by1{
+                    background-color:  #ADD8E6 !important;
+        }
+    </style>
+""", unsafe_allow_html=True)
+        st.markdown(""" <style>
+                    h1#holiday-management {
+                    color: #ADD8E6;
+                    font-size: 24px;
+                    }
+                   
+    
+                    </style>
+                    """, unsafe_allow_html=True)
+        st.title("Holiday Management")
+
+        # Fetch all holidays from the database
+        holidays_df = fetch_holidays_from_db()
+
+        # Adding previous and next buttons to navigate between months
+        if "month" not in st.session_state:
+            st.session_state.month = current_month
+        if "year" not in st.session_state:
+            st.session_state.year = current_year
+
+        # Create tabs for the Holidays menu
+        tab1, tab2, tab3 = st.tabs(["Calendar", "Add/Modify Holiday", "Holiday List"])
+
+        # Tab 1: Calendar
+        with tab1:
+            st.write("### Holiday Calendar")
+            # Display navigation buttons for the calendar
+            col1, col2, col3 = st.columns([1, 2, 1])
+
+            with col1:
+                if st.button("Previous Month"):
+                    if st.session_state.month == 1:
+                        st.session_state.month = 12
+                        st.session_state.year -= 1
+                    else:
+                        st.session_state.month -= 1
+
+            with col2:
+                st.write(f"### {calendar.month_name[st.session_state.month]} {st.session_state.year}")
+
+            with col3:
+                if st.button("Next Month"):
+                    if st.session_state.month == 12:
+                        st.session_state.month = 1
+                        st.session_state.year += 1
+                    else:
+                        st.session_state.month += 1
+
+            # Display the styled calendar for the selected month and year
+            display_styled_calendar(st.session_state.month, st.session_state.year, holidays_df)
+
+        # Tab 2: Add/Modify Holiday
+        with tab2:
+            st.write("### Add or Modify Holidays")
+            # Form for adding/updating holidays
+            with st.form(key='holiday_form'):
+                holiday_name = st.text_input("Holiday Name", max_chars=100)
+                holiday_date = st.date_input("Holiday Date")
+
+                submit_button = st.form_submit_button(label="Add/Update Holiday")
+
+                if submit_button:
+                    add_or_update_holiday(holiday_name, holiday_date)
+                    st.experimental_rerun()
+
+        # Tab 3: Holiday List
+        with tab3:
+            st.write("### List of All Holidays")
+            holidays_df = holidays_df[["holiday_name","holiday_date"]]
+            # Fetch and display all holidays
+            if not holidays_df.empty:
+                grid_return = AgGrid(holidays_df,fit_columns_on_grid_load=True)
+                
+            else:
+                st.write("No holidays found.")
 
     elif st.session_state.page == 'Settings':
         st.title("Settings")
