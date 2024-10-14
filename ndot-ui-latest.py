@@ -550,14 +550,14 @@ def main_application():
             with tabs[0]:
                 # Create sample data with numbers and design descriptions
                 data = {
-                    "Sprint 17 2024": ["38241 (QAQC Design)", "62238 (Intermediate Design)", "46368 (QAQC Design)"],
-                    "Sprint 18 2024": ["45020 (QAQC Design)", "45020 (Intermediate Design)", "45827 (Post-Doc Design)"],
-                    "Sprint 19 2024": ["62169 (Intermediate Design)", "19358 (Doc Design)", "55804 (Post-Doc Design)"],
-                    "Sprint 20 2024": ["19358 (Doc Design)", "62169 (QAQC Design)", "68958 (Post-Doc Design)"],
-                    "Sprint 21 2024": ["62169 (QAQC Design)", "56358 (Doc Design)", "53336 (Post-Doc Design)"],
-                    "Sprint 22 2024": ["19358 (QAQC Design)", "53336 (Post-Doc Design)", "48704 (Doc Design)"],
-                    "Sprint 23 2024": ["62169 (QAQC Design)", "56458 (Intermediate Design)", "7647 (Doc Design)"],
-                    "Sprint 24 2024": ["56358 (Doc Design)", "7647 (Intermediate Design)", "62239 (QAQC Design)"]
+                    "Sprint 17 2024": ["38241 (QAQC Design)", "62238 (Intermediate Design)", "46368 (QAQC Design)","62238 (Intermediate Design)", "46368 (QAQC Design)"],
+                    "Sprint 18 2024": ["45020 (QAQC Design)", "45020 (Intermediate Design)", "45827 (Post-Doc Design)", "53336 (Post-Doc Design)", "48704 (Doc Design)"],
+                    "Sprint 19 2024": ["62169 (Intermediate Design)", "19358 (Doc Design)", "55804 (Post-Doc Design)", "7647 (Intermediate Design)", "62239 (QAQC Design)"],
+                    "Sprint 20 2024": ["19358 (Doc Design)", "62169 (QAQC Design)", "68958 (Post-Doc Design)","62238 (Intermediate Design)", "46368 (QAQC Design)"],
+                    "Sprint 21 2024": ["62169 (QAQC Design)", "56358 (Doc Design)", "53336 (Post-Doc Design)", "7647 (Intermediate Design)", "62239 (QAQC Design)"],
+                    "Sprint 22 2024": ["19358 (QAQC Design)", "53336 (Post-Doc Design)", "48704 (Doc Design)","62238 (Intermediate Design)", "46368 (QAQC Design)"],
+                    "Sprint 23 2024": ["62169 (QAQC Design)", "56458 (Intermediate Design)", "7647 (Doc Design)", "7647 (Intermediate Design)", "62239 (QAQC Design)"],
+                    "Sprint 24 2024": ["56358 (Doc Design)", "7647 (Intermediate Design)", "62239 (QAQC Design)","62238 (Intermediate Design)", "46368 (QAQC Design)"]
                 }
 
                 # Convert the data into a pandas DataFrame
