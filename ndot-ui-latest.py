@@ -10,14 +10,11 @@ from st_material_table import st_material_table
 import calendar
 from streamlit_modal import Modal
 #from streamlit_timeline import st_timeline
-#from streamlit_timeline import timeline
-from st_aggrid import AgGrid
+from streamlit_timeline import timeline
+from st_aggrid import AgGrid, GridOptionsBuilder
 import pandas as pd
 
 
-@st.cache_data
-def get_data():
-    return pd.read_json("https://www.ag-grid.com/example-assets/olympic-winners.json")
 
 # st.markdown("""
 #     <style>
@@ -551,10 +548,53 @@ def main_application():
             tabs = st.tabs(["Projects"])
         
             with tabs[0]:
-                grid_return = AgGrid(df)
+                # Create sample data with numbers and design descriptions
+                data = {
+                    "Sprint 17 2024": ["38241 (QAQC Design)", "62238 (Intermediate Design)", "46368 (QAQC Design)"],
+                    "Sprint 18 2024": ["45020 (QAQC Design)", "45020 (Intermediate Design)", "45827 (Post-Doc Design)"],
+                    "Sprint 19 2024": ["62169 (Intermediate Design)", "19358 (Doc Design)", "55804 (Post-Doc Design)"],
+                    "Sprint 20 2024": ["19358 (Doc Design)", "62169 (QAQC Design)", "68958 (Post-Doc Design)"],
+                    "Sprint 21 2024": ["62169 (QAQC Design)", "56358 (Doc Design)", "53336 (Post-Doc Design)"],
+                    "Sprint 22 2024": ["19358 (QAQC Design)", "53336 (Post-Doc Design)", "48704 (Doc Design)"],
+                    "Sprint 23 2024": ["62169 (QAQC Design)", "56458 (Intermediate Design)", "7647 (Doc Design)"],
+                    "Sprint 24 2024": ["56358 (Doc Design)", "7647 (Intermediate Design)", "62239 (QAQC Design)"]
+                }
+
+                # Convert the data into a pandas DataFrame
+                df = pd.DataFrame(data)
+
+                df = df.reset_index(drop=True)
+
+                # Function to apply colors based on conditions
+                def highlight_cells(val):
+                    if 'QAQC' in val:
+                        color = 'red'  # Cells containing "QAQC" will be red
+                    elif 'Intermediate' in val:
+                        color = 'yellow'  # Cells containing "Intermediate" will be yellow
+                    else:
+                        color = ''  # Default color (no highlight)
+                    return f'background-color: {color}'
+
+                # Apply the styling
+                styled_df = df.style.applymap(highlight_cells).hide(axis="index")
+
+                # Display the styled dataframe in Streamlit
+                st.dataframe(styled_df)
+                
 
                 #st.write(grid_return)
-            
+        st.markdown(""" <style>
+                    
+                  .st-emotion-cache-1rsyhoq.e1nzilvr5 P {
+                    color:#ADD8E6;
+                  }
+                    </style>
+                    """, unsafe_allow_html=True)
+                
+        st.write("Epic Status")
+        data = fetch_data_from_db("Epics")     
+         
+        grid_return = AgGrid(st.dataframe(data) ,enable_enterprise_modules=False) 
     elif st.session_state.page == 'Dashboard':
         st.title("Dashboard")
         st.write("Welcome to the Dashboard!")
