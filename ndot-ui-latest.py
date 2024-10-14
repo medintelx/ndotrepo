@@ -568,9 +568,9 @@ def main_application():
                 # Function to apply colors based on conditions
                 def highlight_cells(val):
                     if 'QAQC' in val:
-                        color = 'red'  # Cells containing "QAQC" will be red
+                        color = '#dc6c55'  # Cells containing "QAQC" will be red
                     elif 'Intermediate' in val:
-                        color = 'yellow'  # Cells containing "Intermediate" will be yellow
+                        color = '#dbc53a'  # Cells containing "Intermediate" will be yellow
                     else:
                         color = ''  # Default color (no highlight)
                     return f'background-color: {color}'
@@ -674,7 +674,7 @@ def main_application():
                     st.write("No users available.")
     elif st.session_state.page == 'Users':
         st.markdown(""" <style>
-                    h1#user-management {
+                    h1#leave-management {
                     color: #ADD8E6;
                     font-size: 24px;
                     }
@@ -813,7 +813,7 @@ def main_application():
 
                 if submit_button:
                     add_or_update_holiday(holiday_name, holiday_date)
-                    st.experimental_rerun()
+                    st.rerun()
 
         # Tab 3: Holiday List
         with tab3:
