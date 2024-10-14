@@ -10,7 +10,7 @@ from st_material_table import st_material_table
 import calendar
 from streamlit_modal import Modal
 #from streamlit_timeline import st_timeline
-from streamlit_timeline import timeline
+#from streamlit_timeline import timeline
 from st_aggrid import AgGrid
 import pandas as pd
 
