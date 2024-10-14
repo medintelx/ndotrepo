@@ -8,9 +8,9 @@ import plotly.graph_objects as go
 import pandas as pd
 from st_material_table import st_material_table
 import calendar
-from streamlit_modal import Modal
+#from streamlit_modal import Modal
 #from streamlit_timeline import st_timeline
-from streamlit_timeline import timeline
+#from streamlit_timeline import timeline
 from st_aggrid import AgGrid, GridOptionsBuilder
 import pandas as pd
 
