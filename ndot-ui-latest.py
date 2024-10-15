@@ -593,14 +593,13 @@ def main_application():
                 
         st.write("Epic Status")
         #data = fetch_data_from_db("Epics")     
-        data = 
-  {
-    "epic": "Epic-001",
-    "projectid": "Project-123",
-    "Effort points": 40,
-    "DueDate": "2024-10-30",
-    "Sprint date": "2024-10-01"
-  } 
+        data = {
+        "epic": "Epic-001",
+        "projectid": "Project-123",
+        "Effort points": 40,
+        "DueDate": "2024-10-30",
+        "Sprint date": "2024-10-01"
+       } 
         #df = pd.DataFrame(data)
         grid_return = AgGrid(st.dataframe(data) ,enable_enterprise_modules=False) 
     elif st.session_state.page == 'Dashboard':
