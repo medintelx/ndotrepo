@@ -576,10 +576,10 @@ def main_application():
                     return f'background-color: {color}'
 
                 # Apply the styling
-                styled_df = df.style.applymap(highlight_cells).hide(axis="index")
+              #  styled_df = df.style.applymap(highlight_cells).hide(axis="index")
 
                 # Display the styled dataframe in Streamlit
-                st.dataframe(styled_df)
+                st.dataframe(df)
                 
 
                 #st.write(grid_return)
