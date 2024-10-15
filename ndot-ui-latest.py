@@ -455,8 +455,8 @@ def main_application():
     # Sidebar with interactive buttons
     if st.sidebar.button('🏠 Home', key='home'):
         st.session_state.page = 'Home'
-    if st.sidebar.button('📊 Dashboard', key='dashboard'):
-        st.session_state.page = 'Dashboard'
+    # if st.sidebar.button('📊 Dashboard', key='dashboard'):
+    #     st.session_state.page = 'Dashboard'
     if st.sidebar.button('📅 Leaves', key='leaves'):
         st.session_state.page = 'Leaves'
     if st.sidebar.button('👤 Users', key='users'):
