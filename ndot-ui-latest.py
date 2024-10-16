@@ -175,7 +175,7 @@ def init_user_db():
 init_user_db()
 
 # Function to add a new user to the database
-def add_user_to_db(name, email, role, active_status):
+def add_user_to_db(name, email, role):
     conn = sqlite3.connect('NDOTDATA.db')
     cursor = conn.cursor()
     
@@ -183,7 +183,7 @@ def add_user_to_db(name, email, role, active_status):
         cursor.execute('''
             INSERT INTO users (name, email, role, active_status)
             VALUES (?, ?, ?, ?)
-        ''', (name, email, role, active_status))
+        ''', (name, email, role, 0))
         conn.commit()
         st.success("User added successfully!")
     except sqlite3.IntegrityError:
@@ -423,7 +423,7 @@ def display_styled_calendar(month, year, holidays_df):
         try:
             date = datetime(year, month, day)
             if date.weekday() == 5 or date.weekday() == 6:  # 5=Saturday, 6=Sunday
-                month_calendar = month_calendar.replace(f">{day}<", f' style="background-color: #D3F8E2;">{day}<')  # Light green for weekends
+                month_calendar = month_calendar.replace(f">{day}<", f' style="background-color: #FFDDC1;">{day}<')  # Light green for weekends
         except ValueError:
             pass  # Ignore invalid dates
 
@@ -741,6 +741,7 @@ def main_application():
 
                 if not users_df.empty:
                     # Form for adding a leave
+
                     with st.form(key='leave_form'):
                         user = st.selectbox("Select User", users_df['name'])
                         leave_from = st.date_input("Leave From")
@@ -790,18 +791,19 @@ def main_application():
         tab1, tab2 = st.tabs(["Create User", "All Users"])
 
         with tab1:
+            st.form
             # Create a form for user creation
             with st.form(key='user_form'):
                 name = st.text_input("Name", max_chars=50)
                 email = st.text_input("Email", max_chars=100)
                 role = st.selectbox("Role", ["Admin", "Viewer", "Editor"])
-                active_status = st.checkbox("Active Status", value=True)
+                #active_status = st.checkbox("Active Status", value=True)
                 
                 # Submit button
                 submit_button = st.form_submit_button(label="Create User")
                 
                 if submit_button:
-                    add_user_to_db(name, email, role, active_status)
+                    add_user_to_db(name, email, role)
         with tab2:   
         # Display existing users
             conn = sqlite3.connect('NDOTDATA.db')
@@ -877,33 +879,40 @@ def main_application():
         with tab3:
             st.write("### Holiday Calendar")
             # Display navigation buttons for the calendar
-            col1, col2, col3 = st.columns([1, 2, 1])
+            col1, col2, col3 = st.columns([0.5, 1, 1], gap="small",vertical_alignment="center")
 
             with col1:
                 if st.button("Previous Month"):
                     if st.session_state.month == 1:
                         st.session_state.month = 12
                         st.session_state.year -= 1
+                        st.rerun()
                     else:
                         st.session_state.month -= 1
+                        st.rerun()
 
             with col2:
                 st.write(f"### {calendar.month_name[st.session_state.month]} {st.session_state.year}")
+                # Display the styled calendar for the selected month and year
+                display_styled_calendar(st.session_state.month, st.session_state.year, holidays_df)
 
             with col3:
                 if st.button("Next Month"):
                     if st.session_state.month == 12:
                         st.session_state.month = 1
                         st.session_state.year += 1
+                        st.rerun()
                     else:
                         st.session_state.month += 1
+                        st.rerun()
 
-            # Display the styled calendar for the selected month and year
-            display_styled_calendar(st.session_state.month, st.session_state.year, holidays_df)
+            
 
         # Tab 2: Add/Modify Holiday
         with tab2:
+            
             st.write("### Add or Modify Holidays")
+            
             # Form for adding/updating holidays
             with st.form(key='holiday_form'):
                 holiday_name = st.text_input("Holiday Name", max_chars=100)
@@ -913,7 +922,7 @@ def main_application():
 
                 if submit_button:
                     add_or_update_holiday(holiday_name, holiday_date)
-                    st.rerun()
+                    #st.rerun()
 
         # Tab 3: Holiday List
         with tab1:
