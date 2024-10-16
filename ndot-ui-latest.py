@@ -37,6 +37,41 @@ text-color:white;
 }
 </style>
 """
+import base64
+# Function to load a local image and convert it to base64
+def get_image_as_base64(image_file):
+    with open(image_file, "rb") as f:
+        data = f.read()
+    return base64.b64encode(data).decode()
+
+# Sidebar logo setup
+def sidebar_with_logo():
+    img_base64 = get_image_as_base64(os.path.join(os.path.dirname(__file__),"neveda.png"))
+    # CSS to inject the logo into the sidebar header using the data-testid attribute
+    st.markdown(
+        """
+        <style>
+        [data-testid="stSidebarHeader"] {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        [data-testid="stSidebarHeader"]::before {
+            content: '';
+            background-image: url(data:image/png;base64,{img_base64});
+            background-size: contain;
+            background-repeat: no-repeat;
+            width: 120px;
+            height: 120px;
+            display: block;
+            margin: 0 auto;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+
 
 # Custom CSS to change the sidebar background color
 sidebar_style = """
@@ -413,25 +448,36 @@ def main_application():
         <style>
          /* Adjust the sidebar width */
         [data-testid="stSidebar"] {
-            background-color: #ADD8E6; 
-           /* background: rgb(2,0,36);
-            background: linear-gradient(90deg, rgba(2,0,36,1) 0%, rgba(9,9,121,1) 0%, rgba(7,59,154,1) 0%, rgba(11,78,149,1) 11%, rgba(35,128,201,1) 65%, rgba(0,212,255,1) 100%);
-          */  min-width: 140px;  /* Set the minimum width for the sidebar */
+            background-color: #0253A4; 
+            min-width: 140px;  /* Set the minimum width for the sidebar */
             max-width: 140px;  /* Set the maximum width for the sidebar */
         }
         [data-testid="stButton"] {
-           background-color: #ADD8E6; 
+           background-color: #0253A4; 
               border-radius: 50px; 
              width: 100%; 
             border-size: none;
             min-width: 130px;  /* Set the minimum width for the sidebar */
             max-width: 130px;  /* Set the maximum width for the sidebar */
+            padding-top: 0px;
         }
        [data-testid="stButton"]  button {
-        background-color: #ADD8E6;
+        background-color:#0253A4;
         border-radius: 50px; 
          border: none;
+        color: white;
         }
+
+
+        [data-testid="stLogo"] {
+         height: 5.5rem;
+         width: 100%;
+         margin: 0px 0px 0px 0px;
+         padding: 0px;
+        }
+     
+        
+
         .menu-button {
             background-color: #0253A4;
             color: white;
@@ -448,11 +494,33 @@ def main_application():
             color: white;
             cursor: pointer;
         }
+        div.st-emotion-cache-1gwvy71.eczjsme12{
+        margin-top: -36px;
+        }
+        .Apptitle {
+        font-size: 14px;
+        
+        text-decoration-color: white;
+        font-weight: 800;
+        color: white;
+        margin-top: -10px;
+        width:100%;
+        }
         </style>
         """, unsafe_allow_html=True
     )
+    st.logo("neveda.png", size="medium")
+    htmlstr = """
+<div class='Apptitle'>
+<span>SLI FORECASTING TOOL</span>
+</div>
+"""
 
+    #st.sidebar.write(htmlstr)
+    st.sidebar.html(htmlstr)
+   # st.sidebar.write("SLI Forecasting Tool", key="ToolName")
     # Sidebar with interactive buttons
+   # st.sidebar.divider()
     if st.sidebar.button('🏠 Home', key='home'):
         st.session_state.page = 'Home'
     # if st.sidebar.button('📊 Dashboard', key='dashboard'):
@@ -461,14 +529,17 @@ def main_application():
         st.session_state.page = 'Leaves'
     if st.sidebar.button('👤 Users', key='users'):
         st.session_state.page = 'Users'
-    if st.sidebar.button('🏦 Holidays', key='holiday'):
+    if st.sidebar.button('🎄 Holidays', key='holiday'):
         st.session_state.page = 'Holidays'
     if st.sidebar.button('⚙️ Settings', key='settings'):
         st.session_state.page = 'Settings'
+    # if st.sidebar.button("🔓 Logout", key='logout'):
+    #     st.session_state.page = 'Logout'
+        
 
     # Based on the selected page, display the corresponding content
     if st.session_state.page == 'Home':
-      
+        
         st.markdown("""
     <style>
         div.stMainBlockContainer.block-container.st-emotion-cache-1jicfl2.ea3mdgi5 {
@@ -524,8 +595,8 @@ def main_application():
                         NonAnchorWgt = st.number_input("Non-Anchor Weight", min_value=0.0, format="%.2f", disabled=True)
                     st.divider()
                     with st.popover("Max Points "):                     
-                        AnchorMaxPoints = st.number_input("Anchor Max Points", min_value=0)
-                        NonAnchorMaxPoints = st.number_input("Non-Anchor Max Points", min_value=0)
+                        AnchorMaxPoints = st.number_input("Anchor Max Effort Points", min_value=0)
+                        NonAnchorMaxPoints = st.number_input("Non-Anchor Effort Max Points", min_value=0)
                     st.divider()
                     with st.popover("Min Points "):   
                         EpicMinEffortPoints = st.number_input("Epic Min Effort Points", min_value=0)
@@ -609,13 +680,14 @@ def main_application():
 
     elif st.session_state.page == 'Leaves':
         st.markdown(""" <style>
-                    h1#leave-management {
+                    .LeaveManage {
                     color: #ADD8E6;
-                    font-size: 24px;
+                    font-size: 20px;
+                    font-weight: bold;  
                     }
                    
                      div.stMainBlockContainer.block-container.st-emotion-cache-1jicfl2.ea3mdgi5 {
-                    padding-top: 1rem !important;
+                    padding-top: 2rem !important;
                     padding-left: 2rem !important;
                     font-size: 12px;
         }
@@ -630,7 +702,13 @@ def main_application():
                     """, unsafe_allow_html=True)
 
      # Title for Leave Management
-        st.title("Leave Management")
+        htmlleavestr = """
+<div class='LeaveManage'>
+<span>Leave Management</span>
+</div>
+""" 
+        st.html(htmlleavestr)
+        #st.title("Leave Management")
 
         # Create a modal instance
         modal = Modal(key="add_leave_modal", title="Add Leave")
@@ -682,13 +760,14 @@ def main_application():
                     st.write("No users available.")
     elif st.session_state.page == 'Users':
         st.markdown(""" <style>
-                    h1#leave-management {
+                    .UserManage {
                     color: #ADD8E6;
-                    font-size: 24px;
+                    font-size: 20px;
+                    font-weight: bold;  
                     }
                    
                      div.stMainBlockContainer.block-container.st-emotion-cache-1jicfl2.ea3mdgi5 {
-                    padding-top: 1rem !important;
+                    padding-top: 2rem !important;
                     padding-left: 2rem !important;
                     font-size: 12px;
         }
@@ -701,7 +780,13 @@ def main_application():
                     }
                     </style>
                     """, unsafe_allow_html=True)
-        st.title("User Management")
+        htmluserstr = """
+<div class='UserManage'>
+<span>User Management</span>
+</div>
+""" 
+        st.html(htmluserstr)
+        #st.title("User Management")
         tab1, tab2 = st.tabs(["Create User", "All Users"])
 
         with tab1:
@@ -746,7 +831,7 @@ def main_application():
     elif st.session_state.page == 'Holidays':
         st.markdown(""" <style>
         div.stMainBlockContainer.block-container.st-emotion-cache-1jicfl2.ea3mdgi5 {
-                    padding-top: 1rem !important;
+                    padding-top: 2rem !important;
                     padding-left: 2rem !important;
                     font-size: 12px;
         }
@@ -759,15 +844,22 @@ def main_application():
     </style>
 """, unsafe_allow_html=True)
         st.markdown(""" <style>
-                    h1#holiday-management {
+                    .HolidayManage {
                     color: #ADD8E6;
-                    font-size: 24px;
+                    font-size: 20px;
+                    font-weight: bold;  
                     }
                    
     
                     </style>
                     """, unsafe_allow_html=True)
-        st.title("Holiday Management")
+        htmlholidaystr = """
+<div class='HolidayManage'>
+<span>Holiday Management</span>
+</div>
+""" 
+        st.html(htmlholidaystr)
+        #st.title("Holiday Management")
 
         # Fetch all holidays from the database
         holidays_df = fetch_holidays_from_db()
@@ -779,10 +871,10 @@ def main_application():
             st.session_state.year = current_year
 
         # Create tabs for the Holidays menu
-        tab1, tab2, tab3 = st.tabs(["Calendar", "Add/Modify Holiday", "Holiday List"])
+        tab1, tab2, tab3 = st.tabs([ "Holiday List","Add/Modify Holiday", "Calendar"])
 
         # Tab 1: Calendar
-        with tab1:
+        with tab3:
             st.write("### Holiday Calendar")
             # Display navigation buttons for the calendar
             col1, col2, col3 = st.columns([1, 2, 1])
@@ -824,7 +916,7 @@ def main_application():
                     st.rerun()
 
         # Tab 3: Holiday List
-        with tab3:
+        with tab1:
             st.write("### List of All Holidays")
             holidays_df = holidays_df[["holiday_name","holiday_date"]]
             # Fetch and display all holidays
@@ -837,7 +929,8 @@ def main_application():
     elif st.session_state.page == 'Settings':
         st.title("Settings")
         st.write("Manage application settings.")
-
+    # elif st.session_state.page == 'Logout':
+    #     st.session_state['logged_in'] = False
         
     #menu = st.sidebar.selectbox("Menu", ["Work Items", "Users", "Config", "Leaves", "Holidays", "Forecast"])
 
@@ -1047,7 +1140,7 @@ def main_application():
     #     filtered_df = joined_df[joined_df['project_State'].isin(['Actively Working', 'Approved', 'On-Hold'])]
 
     #     # Display the updated DataFrame with the new column
-    #     st.write("Product Backlog Items joined with Features, Epics, and Projects:")
+    #     st.write("Product Backlog Items joined with Features, Epics, and Projects:"n
     #     st.dataframe(filtered_df)
 
 
