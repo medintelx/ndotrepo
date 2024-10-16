@@ -922,7 +922,7 @@ def main_application():
 
                 if submit_button:
                     add_or_update_holiday(holiday_name, holiday_date)
-                    #st.rerun()
+                    st.rerun()
 
         # Tab 3: Holiday List
         with tab1:
