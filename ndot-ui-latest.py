@@ -791,7 +791,7 @@ def main_application():
         tab1, tab2 = st.tabs(["Create User", "All Users"])
 
         with tab1:
-            st.form
+            
             # Create a form for user creation
             with st.form(key='user_form'):
                 name = st.text_input("Name", max_chars=50)
