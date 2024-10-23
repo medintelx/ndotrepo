@@ -13,6 +13,7 @@ from streamlit_modal import Modal
 #from streamlit_timeline import timeline
 from st_aggrid import AgGrid, GridOptionsBuilder
 import pandas as pd
+import datautility as du
 
 
 
@@ -256,19 +257,37 @@ def delete_user_from_db(user_id):
     st.success(f"User with ID {user_id} has been deleted.")
 
 
-# Function to add a new configuration to the database
-def add_config_to_db(AnchorWgt, NonAnchorWgt, MiscWgt, AnchorMaxPoints, NonAnchorMaxPoints, EpicMinEffortPoints):
+# Function to insert a new configuration if none exists, or update the existing one
+def add_config_to_db(AnchorWgt,NonAnchorWgt, MiscWgt, AnchorMaxPoints, NonAnchorMaxPoints, EpicMinEffortPoints):
     conn = sqlite3.connect('NDOTDATA.db')
     cursor = conn.cursor()
-    
-    cursor.execute('''
-        INSERT INTO weightageconfig (AnchorWgt, NonAnchorWgt, MiscWgt, AnchorMaxPoints, NonAnchorMaxPoints, EpicMinEffortPoints, modifiedtime)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-    ''', (AnchorWgt, NonAnchorWgt, MiscWgt, AnchorMaxPoints, NonAnchorMaxPoints, EpicMinEffortPoints, datetime.now()))
-    
+
+    # Calculate NonAnchorWgt as 100 - AnchorWgt
+    NonAnchorWgt = 100 - AnchorWgt
+
+    # Check if there is already a configuration in the table
+    cursor.execute('SELECT COUNT(*) FROM weightageconfig')
+    record_count = cursor.fetchone()[0]
+
+    if record_count == 0:
+        # If no record exists, insert a new one
+        cursor.execute('''
+            INSERT INTO weightageconfig (AnchorWgt, NonAnchorWgt, MiscWgt, AnchorMaxPoints, NonAnchorMaxPoints, EpicMinEffortPoints, modifiedtime)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ''', (AnchorWgt, NonAnchorWgt, MiscWgt, AnchorMaxPoints, NonAnchorMaxPoints, EpicMinEffortPoints, datetime.now()))
+        st.toast("Configuration inserted successfully!")
+    else:
+        # If a record already exists, update the first row
+        cursor.execute('''
+            UPDATE weightageconfig
+            SET AnchorWgt = ?, NonAnchorWgt = ?, MiscWgt = ?, AnchorMaxPoints = ?, NonAnchorMaxPoints = ?, EpicMinEffortPoints = ?,modifiedtime=?
+            WHERE rowid = 1  -- Assuming you always want to update the first row
+        ''', (AnchorWgt, NonAnchorWgt, MiscWgt, AnchorMaxPoints, NonAnchorMaxPoints, EpicMinEffortPoints, datetime.now()))
+        st.toast("Configuration updated successfully!")
+
+    # Commit the transaction and close the connection
     conn.commit()
     conn.close()
-    st.success("Configuration saved successfully!")
 
 # Function to fetch data from the database based on work item type
 def fetch_data_from_db(work_item_type):
@@ -441,6 +460,9 @@ def main_application():
     # Initialize session state to handle page navigation
     if 'page' not in st.session_state:
         st.session_state.page = 'Home'
+    if 'updated_forecast_df' not in st.session_state:
+        st.session_state.updated_forecast_df = pd.DataFrame()  # Initialize empty dataframe in session state
+
 
     # Sidebar styling
     st.sidebar.markdown(
@@ -510,9 +532,10 @@ def main_application():
         """, unsafe_allow_html=True
     )
     st.logo("neveda.png", size="medium")
+    st.sidebar.image("slingshot.png")
     htmlstr = """
 <div class='Apptitle'>
-<span>SLI FORECASTING TOOL</span>
+<span>SLIngshots!</span>
 </div>
 """
 
@@ -582,6 +605,24 @@ def main_application():
                     """, unsafe_allow_html=True)
         st.title("Forecast")
         mcol1, mcol2 = st.columns([1, 5])
+        # Fetch the latest configuration values
+        latest_config = du.fetch_latest_config()
+        
+        # Default values if no configuration exists
+        if latest_config is not None:
+            AnchorWgt_default = latest_config['AnchorWgt']
+            NonAnchorWgt_default = latest_config['NonAnchorWgt']
+            MiscWgt_default = latest_config['MiscWgt']
+            AnchorMaxPoints_default = latest_config['AnchorMaxPoints']
+            NonAnchorMaxPoints_default = latest_config['NonAnchorMaxPoints']
+            EpicMinEffortPoints_default = latest_config['EpicMinEffortPoints']
+        else:
+            AnchorWgt_default = 0.0
+            NonAnchorWgt_default = 0.0
+            MiscWgt_default = 0.0
+            AnchorMaxPoints_default = 0.0
+            NonAnchorMaxPoints_default = 0.0
+            EpicMinEffortPoints_default = 0.0
         with mcol1:
             # Create the form inside a div with the custom class
             with st.form(key='config_form'):
@@ -590,23 +631,31 @@ def main_application():
                 with st.container():
                     with st.popover("Type Weights"):
                     # Input fields will be stacked vertically inside the container
-                        MiscWgt = st.number_input("Miscellaneous Weight", min_value=0.0, format="%.2f")
-                        AnchorWgt = st.number_input("Anchor Weight", min_value=0.0, format="%.2f")
-                        NonAnchorWgt = st.number_input("Non-Anchor Weight", min_value=0.0, format="%.2f", disabled=True)
+                        MiscWgt = st.number_input("Miscellaneous Weight", min_value=0.0, value=MiscWgt_default, format="%.2f")
+                        AnchorWgt = st.number_input("Anchor Weight", min_value=0.0, value=AnchorWgt_default,format="%.2f")
+                        NonAnchorWgt = st.number_input("Non-Anchor Weight", min_value=0.0, value=NonAnchorWgt_default,  format="%.2f", disabled=True)
                     st.divider()
                     with st.popover("Max Points "):                     
-                        AnchorMaxPoints = st.number_input("Anchor Max Effort Points", min_value=0)
-                        NonAnchorMaxPoints = st.number_input("Non-Anchor Effort Max Points", min_value=0)
+                        AnchorMaxPoints = st.number_input("Anchor Max Effort Points", min_value=0.0,  value=AnchorMaxPoints_default)
+                        NonAnchorMaxPoints = st.number_input("Non-Anchor Effort Max Points", min_value=0.0, value=NonAnchorMaxPoints_default)
                     st.divider()
                     with st.popover("Min Points "):   
-                        EpicMinEffortPoints = st.number_input("Epic Min Effort Points", min_value=0)
+                        EpicMinEffortPoints = st.number_input("Epic Min Effort Points", min_value=0.0,value=EpicMinEffortPoints_default)
                     
-                # Submit button at the end
-                st.divider()
-                submit_button = st.form_submit_button(label="Forecast")
-                st.markdown('</div>', unsafe_allow_html=True)
-                if submit_button:
-                    add_config_to_db(AnchorWgt, NonAnchorWgt, MiscWgt, AnchorMaxPoints, NonAnchorMaxPoints, EpicMinEffortPoints)
+                    # Submit button at the end
+                    st.divider()
+                    submit_button = st.form_submit_button(label="Forecast")
+                    st.markdown('</div>', unsafe_allow_html=True)
+                    if submit_button:
+                        add_config_to_db(AnchorWgt, NonAnchorWgt, MiscWgt, AnchorMaxPoints, NonAnchorMaxPoints, EpicMinEffortPoints)
+                        # Recompute the updated forecast data based on the new configuration
+                        anchor_project_df, non_anchor_project_df = du.get_project_data()
+                        upcoming_sprint_data = du.get_upcoming_sprints_with_effortpoints_and_weightage()
+
+                        # Update session state with new forecast data for projects
+                        st.session_state.updated_forecast_df = du.allocate_epics_to_sprints(upcoming_sprint_data, anchor_project_df, non_anchor_project_df)
+                        st.rerun()
+                        st.toast("Forecast updated successfully!")
         # Create the form inside a div with the custom class
         with mcol2:
           #  st.write("Project Forecast")
@@ -619,61 +668,38 @@ def main_application():
             tabs = st.tabs(["Projects"])
         
             with tabs[0]:
-                # Create sample data with numbers and design descriptions
-                data = {
-                    "Sprint 17 2024": ["38241 (QAQC Design)", "62238 (Intermediate Design)", "46368 (QAQC Design)","62238 (Intermediate Design)", "46368 (QAQC Design)"],
-                    "Sprint 18 2024": ["45020 (QAQC Design)", "45020 (Intermediate Design)", "45827 (Post-Doc Design)", "53336 (Post-Doc Design)", "48704 (Doc Design)"],
-                    "Sprint 19 2024": ["62169 (Intermediate Design)", "19358 (Doc Design)", "55804 (Post-Doc Design)", "7647 (Intermediate Design)", "62239 (QAQC Design)"],
-                    "Sprint 20 2024": ["19358 (Doc Design)", "62169 (QAQC Design)", "68958 (Post-Doc Design)","62238 (Intermediate Design)", "46368 (QAQC Design)"],
-                    "Sprint 21 2024": ["62169 (QAQC Design)", "56358 (Doc Design)", "53336 (Post-Doc Design)", "7647 (Intermediate Design)", "62239 (QAQC Design)"],
-                    "Sprint 22 2024": ["19358 (QAQC Design)", "53336 (Post-Doc Design)", "48704 (Doc Design)","62238 (Intermediate Design)", "46368 (QAQC Design)"],
-                    "Sprint 23 2024": ["62169 (QAQC Design)", "56458 (Intermediate Design)", "7647 (Doc Design)", "7647 (Intermediate Design)", "62239 (QAQC Design)"],
-                    "Sprint 24 2024": ["56358 (Doc Design)", "7647 (Intermediate Design)", "62239 (QAQC Design)","62238 (Intermediate Design)", "46368 (QAQC Design)"]
-                }
-
-                # Convert the data into a pandas DataFrame
-                df = pd.DataFrame(data)
-
-                df = df.reset_index(drop=True)
-
-                # Function to apply colors based on conditions
-                def highlight_cells(val):
-                    if 'QAQC' in val:
-                        color = '#dc6c55'  # Cells containing "QAQC" will be red
-                    elif 'Intermediate' in val:
-                        color = '#dbc53a'  # Cells containing "Intermediate" will be yellow
-                    else:
-                        color = ''  # Default color (no highlight)
-                    return f'background-color: {color}'
-
-                # Apply the styling
-              #  styled_df = df.style.applymap(highlight_cells).hide(axis="index")
-
+                anchor_project_df, non_anchor_project_df = du.get_project_data()
+                upcoming_sprint_data = du.get_upcoming_sprints_with_effortpoints_and_weightage()
+               # st.write(du.allocate_epics_to_sprints(upcoming_sprint_data, anchor_project_df,non_anchor_project_df))
                 # Display the styled dataframe in Streamlit
-                st.dataframe(df)
+                st.session_state.updated_forecast_df = du.allocate_epics_to_sprints(upcoming_sprint_data, anchor_project_df, non_anchor_project_df)
+                        
+                st.dataframe(st.session_state.updated_forecast_df,    hide_index=True)
                 
 
                 #st.write(grid_return)
-        st.markdown(""" <style>
-                    
-                  .st-emotion-cache-1rsyhoq.e1nzilvr5 P {
-                    color:#ADD8E6;
-                  }
-                    </style>
-                    """, unsafe_allow_html=True)
-                
+       
         st.write("Epic Status")
+        anchor_project_df, non_anchor_project_df = du.get_project_data()
+        upcoming_sprint_data = du.get_upcoming_sprints_with_effortpoints_and_weightage()
+        st.write("anchor")
+        st.write(anchor_project_df)
+        st.write("non-anchor")
+        st.write(non_anchor_project_df)
+        st.write("upcoming_sprint_data")
+        st.write(upcoming_sprint_data)
+            
         #data = fetch_data_from_db("Epics")     
-        data = {
-        "epic": ["Epic-001"],
-        "projectid": ["Project-123"],
-        "Effort points": [40],
-        "DueDate": ["2024-10-30"],
-        "Sprint date": ["2024-10-01"]
-       } 
-        df = pd.DataFrame(data)
-        #grid_return = AgGrid(st.dataframe(data) ,enable_enterprise_modules=False) 
-        st.dataframe(df)
+    #     data = {
+    #     "epic": ["Epic-001"],
+    #     "projectid": ["Project-123"],
+    #     "Effort points": [40],
+    #     "DueDate": ["2024-10-30"],
+    #     "Sprint date": ["2024-10-01"]
+    #    } 
+    #     df = pd.DataFrame(data)
+    #     #grid_return = AgGrid(st.dataframe(data) ,enable_enterprise_modules=False) 
+    #     st.dataframe(df)
     elif st.session_state.page == 'Dashboard':
         st.title("Dashboard")
         st.write("Welcome to the Dashboard!")
@@ -791,7 +817,6 @@ def main_application():
         tab1, tab2 = st.tabs(["Create User", "All Users"])
 
         with tab1:
-            
             # Create a form for user creation
             with st.form(key='user_form'):
                 name = st.text_input("Name", max_chars=50)
@@ -938,8 +963,23 @@ def main_application():
     elif st.session_state.page == 'Settings':
         st.title("Settings")
         st.write("Manage application settings.")
-    # elif st.session_state.page == 'Logout':
-    #     st.session_state['logged_in'] = False
+        st.title("Weightage Configurations")
+
+        # Create a form for entering weightage configuration
+        with st.form(key='config_form'):
+            AnchorWgt = st.number_input("Anchor Weight", min_value=0.0, format="%.2f")
+           # NonAnchorWgt = st.number_input("Non-Anchor Weight", value = (100 - AnchorWgt), format="%.2f", disabled=True)
+            MiscWgt = st.number_input("Miscellaneous Weight", min_value=0.0, format="%.2f")
+            AnchorMaxPoints = st.number_input("Anchor Max Points", min_value=0)
+            NonAnchorMaxPoints = st.number_input("Non-Anchor Max Points", min_value=0)
+            EpicMinEffortPoints = st.number_input("Epic Min Effort Points", min_value=0)
+            NonAnchorWgt = 100 - AnchorWgt
+            # Submit button
+            submit_button = st.form_submit_button(label="Save Configuration")
+            
+            if submit_button:
+                add_config_to_db(AnchorWgt, NonAnchorWgt, MiscWgt, AnchorMaxPoints, NonAnchorMaxPoints, EpicMinEffortPoints)
+ 
         
     #menu = st.sidebar.selectbox("Menu", ["Work Items", "Users", "Config", "Leaves", "Holidays", "Forecast"])
 
