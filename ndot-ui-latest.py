@@ -208,13 +208,25 @@ def add_leave_to_db(user_id, leave_from, leave_to):
 # Function to fetch all leaves from the database and handle user IDs correctly
 def fetch_leaves_from_db():
     conn = sqlite3.connect('NDOTDATA.db')
-    leaves_df = pd.read_sql('''
+    today = datetime.today().date()
+    
+    leaves_df = pd.read_sql(f'''
         SELECT l.id, u.name, l.leave_from, l.leave_to 
         FROM leaves l 
         JOIN users u ON l.user_id = u.id
+        WHERE l.leave_from >= '{today}'
     ''', conn)
+    
     conn.close()
     return leaves_df
+
+# Function to delete a leave entry from the database
+def delete_leave_from_db(leave_id):
+    conn = sqlite3.connect('NDOTDATA.db')
+    cursor = conn.cursor()
+    cursor.execute('DELETE FROM leaves WHERE id = ?', (leave_id,))
+    conn.commit()
+    conn.close()
 
 # Function to fetch all users from the database
 def fetch_users_from_db():
@@ -246,6 +258,14 @@ def fetch_holidays_from_db():
     conn.close()
     return holidays_df
 
+# Function to delete a holiday entry from the database
+def delete_holiday_from_db(holiday_date):
+    conn = sqlite3.connect('NDOTDATA.db')
+    cursor = conn.cursor()
+    cursor.execute('DELETE FROM holidays WHERE holiday_date = ?', (holiday_date,))
+    conn.commit()
+    conn.close()
+
 # Function to delete a user from the database
 def delete_user_from_db(user_id):
     conn = sqlite3.connect('NDOTDATA.db')
@@ -268,13 +288,13 @@ def add_config_to_db(AnchorWgt,NonAnchorWgt, MiscWgt, AnchorMaxPoints, NonAnchor
     # Check if there is already a configuration in the table
     cursor.execute('SELECT COUNT(*) FROM weightageconfig')
     record_count = cursor.fetchone()[0]
-
+    print(record_count)
     if record_count == 0:
         # If no record exists, insert a new one
         cursor.execute('''
-            INSERT INTO weightageconfig (AnchorWgt, NonAnchorWgt, MiscWgt, AnchorMaxPoints, NonAnchorMaxPoints, EpicMinEffortPoints, modifiedtime)
+            INSERT INTO weightageconfig (id, AnchorWgt, NonAnchorWgt, MiscWgt, AnchorMaxPoints, NonAnchorMaxPoints, EpicMinEffortPoints, modifiedtime)
             VALUES (?, ?, ?, ?, ?, ?, ?)
-        ''', (AnchorWgt, NonAnchorWgt, MiscWgt, AnchorMaxPoints, NonAnchorMaxPoints, EpicMinEffortPoints, datetime.now()))
+        ''', (1, AnchorWgt, NonAnchorWgt, MiscWgt, AnchorMaxPoints, NonAnchorMaxPoints, EpicMinEffortPoints, datetime.now()))
         st.toast("Configuration inserted successfully!")
     else:
         # If a record already exists, update the first row
@@ -617,12 +637,12 @@ def main_application():
             NonAnchorMaxPoints_default = latest_config['NonAnchorMaxPoints']
             EpicMinEffortPoints_default = latest_config['EpicMinEffortPoints']
         else:
-            AnchorWgt_default = 0.0
-            NonAnchorWgt_default = 0.0
-            MiscWgt_default = 0.0
-            AnchorMaxPoints_default = 0.0
-            NonAnchorMaxPoints_default = 0.0
-            EpicMinEffortPoints_default = 0.0
+            AnchorWgt_default = 0
+            NonAnchorWgt_default = 0
+            MiscWgt_default = 0
+            AnchorMaxPoints_default = 0
+            NonAnchorMaxPoints_default = 0
+            EpicMinEffortPoints_default = 0
         with mcol1:
             # Create the form inside a div with the custom class
             with st.form(key='config_form'):
@@ -631,16 +651,16 @@ def main_application():
                 with st.container():
                     with st.popover("Type Weights"):
                     # Input fields will be stacked vertically inside the container
-                        MiscWgt = st.number_input("Miscellaneous Weight", min_value=0.0, value=MiscWgt_default, format="%.2f")
-                        AnchorWgt = st.number_input("Anchor Weight", min_value=0.0, value=AnchorWgt_default,format="%.2f")
-                        NonAnchorWgt = st.number_input("Non-Anchor Weight", min_value=0.0, value=NonAnchorWgt_default,  format="%.2f", disabled=True)
+                        MiscWgt = st.number_input("Miscellaneous Weight", min_value=0, value=MiscWgt_default,step=1, format="%d")
+                        AnchorWgt = st.number_input("Anchor Weight", min_value=0, value=AnchorWgt_default, step=1, format="%d")
+                        NonAnchorWgt = st.number_input("Non-Anchor Weight", min_value=0, value=NonAnchorWgt_default, step=1, format="%d", disabled=True)
                     st.divider()
                     with st.popover("Max Points "):                     
-                        AnchorMaxPoints = st.number_input("Anchor Max Effort Points", min_value=0.0,  value=AnchorMaxPoints_default)
-                        NonAnchorMaxPoints = st.number_input("Non-Anchor Effort Max Points", min_value=0.0, value=NonAnchorMaxPoints_default)
+                        AnchorMaxPoints = st.number_input("Anchor Max Effort Points", min_value=0,  value=AnchorMaxPoints_default,  step=1, format="%d")
+                        NonAnchorMaxPoints = st.number_input("Non-Anchor Effort Max Points", min_value=0, value=NonAnchorMaxPoints_default , step=1, format="%d")
                     st.divider()
                     with st.popover("Min Points "):   
-                        EpicMinEffortPoints = st.number_input("Epic Min Effort Points", min_value=0.0,value=EpicMinEffortPoints_default)
+                        EpicMinEffortPoints = st.number_input("Epic Min Effort Points", min_value=0,value=EpicMinEffortPoints_default, step=1, format="%d")
                     
                     # Submit button at the end
                     st.divider()
@@ -648,14 +668,14 @@ def main_application():
                     st.markdown('</div>', unsafe_allow_html=True)
                     if submit_button:
                         add_config_to_db(AnchorWgt, NonAnchorWgt, MiscWgt, AnchorMaxPoints, NonAnchorMaxPoints, EpicMinEffortPoints)
-                        # Recompute the updated forecast data based on the new configuration
+                       # Recompute the updated forecast data based on the new configuration
                         anchor_project_df, non_anchor_project_df = du.get_project_data()
                         upcoming_sprint_data = du.get_upcoming_sprints_with_effortpoints_and_weightage()
 
                         # Update session state with new forecast data for projects
-                        st.session_state.updated_forecast_df = du.allocate_epics_to_sprints(upcoming_sprint_data, anchor_project_df, non_anchor_project_df)
-                        st.rerun()
-                        st.toast("Forecast updated successfully!")
+                        st.session_state.updated_forecast_df = du.distribute_epics_to_sprints(anchor_project_df, non_anchor_project_df, upcoming_sprint_data)
+                        # st.rerun()
+                        # st.toast("Forecast updated successfully!")
         # Create the form inside a div with the custom class
         with mcol2:
           #  st.write("Project Forecast")
@@ -668,24 +688,26 @@ def main_application():
             tabs = st.tabs(["Projects"])
         
             with tabs[0]:
+
                 anchor_project_df, non_anchor_project_df = du.get_project_data()
                 upcoming_sprint_data = du.get_upcoming_sprints_with_effortpoints_and_weightage()
-               # st.write(du.allocate_epics_to_sprints(upcoming_sprint_data, anchor_project_df,non_anchor_project_df))
-                # Display the styled dataframe in Streamlit
-                st.session_state.updated_forecast_df = du.allocate_epics_to_sprints(upcoming_sprint_data, anchor_project_df, non_anchor_project_df)
-                        
+                allocation = du.distribute_epics_to_sprints(anchor_project_df, non_anchor_project_df, upcoming_sprint_data)
+                st.session_state.updated_forecast_df = allocation
                 st.dataframe(st.session_state.updated_forecast_df,    hide_index=True)
                 
 
                 #st.write(grid_return)
        
         st.write("Epic Status")
-        anchor_project_df, non_anchor_project_df = du.get_project_data()
-        upcoming_sprint_data = du.get_upcoming_sprints_with_effortpoints_and_weightage()
-        st.write("anchor")
-        st.write(anchor_project_df)
-        st.write("non-anchor")
-        st.write(non_anchor_project_df)
+    
+       
+        # st.write("anchor")
+        # st.write(anchor_project_df)
+        # st.write("non-anchor")
+        # st.write(non_anchor_project_df)
+       
+        st.write("Sprint Allocation")
+        st.write(allocation)
         st.write("upcoming_sprint_data")
         st.write(upcoming_sprint_data)
             
@@ -745,12 +767,24 @@ def main_application():
         # Show the Total Leaves section
         st.write("### Total Leaves")
 
-        # Fetch and display all leave records
+        # Fetch leaves data
         leaves_df = fetch_leaves_from_db()
-        leaves_df = leaves_df[["name","leave_from","leave_to"]]
-        if not leaves_df.empty:
-            grid_return = AgGrid(leaves_df,fit_columns_on_grid_load=True )
 
+        if not leaves_df.empty:
+            # Display each row with a delete button
+            for i, row in leaves_df.iterrows():
+                col1, col2, col3, col4, col5 = st.columns([2, 2, 2, 2, 1])
+                col1.write(row["name"])
+                col2.write(row["leave_from"])
+                col3.write(row["leave_to"])
+                
+                # Add delete button
+                delete_button = col5.button("Delete", key=f"delete_{row['id']}")
+                
+                if delete_button:
+                    delete_leave_from_db(row["id"])
+                    st.success(f"Leave record for {row['name']} deleted.")
+                    st.rerun()  # Refresh the page to reflect changes
         else:
             st.write("No leave records found.")
 
@@ -951,12 +985,25 @@ def main_application():
 
         # Tab 3: Holiday List
         with tab1:
+            holidays_df = fetch_holidays_from_db()  # Fetch all holidays
+
             st.write("### List of All Holidays")
-            holidays_df = holidays_df[["holiday_name","holiday_date"]]
-            # Fetch and display all holidays
+            holidays_df = holidays_df[["holiday_name", "holiday_date"]]
+
             if not holidays_df.empty:
-                grid_return = AgGrid(holidays_df,fit_columns_on_grid_load=True)
-                
+                # Display each row with a delete button
+                for i, row in holidays_df.iterrows():
+                    col1, col2, col3 = st.columns([3, 3, 1])
+                    col1.write(row["holiday_name"])
+                    col2.write(row["holiday_date"])
+
+                    # Add delete button for each holiday
+                    delete_button = col3.button("Delete", key=f"delete_{row['holiday_date']}")
+                    
+                    if delete_button:
+                        delete_holiday_from_db(row["holiday_date"])
+                        st.success(f"Holiday '{row['holiday_name']}' on {row['holiday_date']} deleted.")
+                        st.rerun()  # Refresh the page to reflect changes
             else:
                 st.write("No holidays found.")
 
@@ -967,12 +1014,12 @@ def main_application():
 
         # Create a form for entering weightage configuration
         with st.form(key='config_form'):
-            AnchorWgt = st.number_input("Anchor Weight", min_value=0.0, format="%.2f")
+            AnchorWgt = st.number_input("Anchor Weight", min_value=0, step=1, format="%d")
            # NonAnchorWgt = st.number_input("Non-Anchor Weight", value = (100 - AnchorWgt), format="%.2f", disabled=True)
-            MiscWgt = st.number_input("Miscellaneous Weight", min_value=0.0, format="%.2f")
-            AnchorMaxPoints = st.number_input("Anchor Max Points", min_value=0)
-            NonAnchorMaxPoints = st.number_input("Non-Anchor Max Points", min_value=0)
-            EpicMinEffortPoints = st.number_input("Epic Min Effort Points", min_value=0)
+            MiscWgt = st.number_input("Miscellaneous Weight", min_value=0, step=1, format="%d")
+            AnchorMaxPoints = st.number_input("Anchor Max Points", min_value=0, step=1, format="%d")
+            NonAnchorMaxPoints = st.number_input("Non-Anchor Max Points", min_value=0, step=1, format="%d")
+            EpicMinEffortPoints = st.number_input("Epic Min Effort Points", min_value=0, step=1, format="%d")
             NonAnchorWgt = 100 - AnchorWgt
             # Submit button
             submit_button = st.form_submit_button(label="Save Configuration")
