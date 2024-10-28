@@ -254,7 +254,7 @@ def add_or_update_holiday(holiday_name, holiday_date):
 
 def fetch_holidays_from_db():
     conn = sqlite3.connect('NDOTDATA.db')
-    holidays_df = pd.read_sql("SELECT * FROM holidays", conn)
+    holidays_df = pd.read_sql("SELECT * FROM holidays ORDER BY holiday_date ASC", conn)
     conn.close()
     return holidays_df
 
@@ -570,8 +570,8 @@ def main_application():
     #     st.session_state.page = 'Dashboard'
     if st.sidebar.button('📅 Leaves', key='leaves'):
         st.session_state.page = 'Leaves'
-    if st.sidebar.button('👤 Users', key='users'):
-        st.session_state.page = 'Users'
+    if st.sidebar.button('👤 Resources', key='resources'):
+        st.session_state.page = 'Resources'
     if st.sidebar.button('🎄 Holidays', key='holiday'):
         st.session_state.page = 'Holidays'
     if st.sidebar.button('⚙️ Settings', key='settings'):
@@ -623,94 +623,100 @@ def main_application():
              
                     </style>
                     """, unsafe_allow_html=True)
-        st.title("Forecast")
-        mcol1, mcol2 = st.columns([1, 5])
-        # Fetch the latest configuration values
-        latest_config = du.fetch_latest_config()
-        
-        # Default values if no configuration exists
-        if latest_config is not None:
-            AnchorWgt_default = latest_config['AnchorWgt']
-            NonAnchorWgt_default = latest_config['NonAnchorWgt']
-            MiscWgt_default = latest_config['MiscWgt']
-            AnchorMaxPoints_default = latest_config['AnchorMaxPoints']
-            NonAnchorMaxPoints_default = latest_config['NonAnchorMaxPoints']
-            EpicMinEffortPoints_default = latest_config['EpicMinEffortPoints']
-        else:
-            AnchorWgt_default = 0
-            NonAnchorWgt_default = 0
-            MiscWgt_default = 0
-            AnchorMaxPoints_default = 0
-            NonAnchorMaxPoints_default = 0
-            EpicMinEffortPoints_default = 0
-        with mcol1:
-            # Create the form inside a div with the custom class
-            with st.form(key='config_form'):
-                st.markdown('<div class="custom-form">', unsafe_allow_html=True)
-                #st.write("Project Weightage")
-                with st.container():
-                    with st.popover("Type Weights"):
-                    # Input fields will be stacked vertically inside the container
-                        MiscWgt = st.number_input("Miscellaneous Weight", min_value=0, value=MiscWgt_default,step=1, format="%d")
-                        AnchorWgt = st.number_input("Anchor Weight", min_value=0, value=AnchorWgt_default, step=1, format="%d")
-                        NonAnchorWgt = st.number_input("Non-Anchor Weight", min_value=0, value=NonAnchorWgt_default, step=1, format="%d", disabled=True)
-                    st.divider()
-                    with st.popover("Max Points "):                     
-                        AnchorMaxPoints = st.number_input("Anchor Max Effort Points", min_value=0,  value=AnchorMaxPoints_default,  step=1, format="%d")
-                        NonAnchorMaxPoints = st.number_input("Non-Anchor Effort Max Points", min_value=0, value=NonAnchorMaxPoints_default , step=1, format="%d")
-                    st.divider()
-                    with st.popover("Min Points "):   
-                        EpicMinEffortPoints = st.number_input("Epic Min Effort Points", min_value=0,value=EpicMinEffortPoints_default, step=1, format="%d")
-                    
-                    # Submit button at the end
-                    st.divider()
-                    submit_button = st.form_submit_button(label="Forecast")
-                    st.markdown('</div>', unsafe_allow_html=True)
-                    if submit_button:
-                        add_config_to_db(AnchorWgt, NonAnchorWgt, MiscWgt, AnchorMaxPoints, NonAnchorMaxPoints, EpicMinEffortPoints)
-                       # Recompute the updated forecast data based on the new configuration
-                        anchor_project_df, non_anchor_project_df = du.get_project_data()
-                        upcoming_sprint_data = du.get_upcoming_sprints_with_effortpoints_and_weightage()
-
-                        # Update session state with new forecast data for projects
-                        st.session_state.updated_forecast_df = du.distribute_epics_to_sprints(anchor_project_df, non_anchor_project_df, upcoming_sprint_data)
-                        # st.rerun()
-                        # st.toast("Forecast updated successfully!")
-        # Create the form inside a div with the custom class
-        with mcol2:
-          #  st.write("Project Forecast")
-            df = fetch_data_from_db("Projects")
-            df = df[["Title", "State", "Anchor_Project", "Priority_Traffic_Ops","Fiscal_Year","Funding_Source","Route_Type","Scoping_30_Percent","SeventyFivePercentComplete","Intermediate_Date","QAQC_Submittal_Date","Document_Submittal_Date"]]
-    
-
-
-
-            tabs = st.tabs(["Projects"])
-        
-            with tabs[0]:
-
-                anchor_project_df, non_anchor_project_df = du.get_project_data()
-                upcoming_sprint_data = du.get_upcoming_sprints_with_effortpoints_and_weightage()
-                allocation = du.distribute_epics_to_sprints(anchor_project_df, non_anchor_project_df, upcoming_sprint_data)
-                st.session_state.updated_forecast_df = allocation
-                st.dataframe(st.session_state.updated_forecast_df,    hide_index=True)
-                
-
-                #st.write(grid_return)
-       
-        st.write("Epic Status")
-    
-       
-        # st.write("anchor")
-        # st.write(anchor_project_df)
-        # st.write("non-anchor")
-        # st.write(non_anchor_project_df)
-       
-        st.write("Sprint Allocation")
-        st.write(allocation)
-        st.write("upcoming_sprint_data")
-        st.write(upcoming_sprint_data)
+        with st.spinner('Loading Forecast...'):
+            st.title("Forecast")
+            mcol1, mcol2 = st.columns([1, 5])
+            # Fetch the latest configuration values
+            latest_config = du.fetch_latest_config()
             
+            # Default values if no configuration exists
+            if latest_config is not None:
+                AnchorWgt_default = latest_config['AnchorWgt']
+                NonAnchorWgt_default = latest_config['NonAnchorWgt']
+                MiscWgt_default = latest_config['MiscWgt']
+                AnchorMaxPoints_default = latest_config['AnchorMaxPoints']
+                NonAnchorMaxPoints_default = latest_config['NonAnchorMaxPoints']
+                EpicMinEffortPoints_default = latest_config['EpicMinEffortPoints']
+            else:
+                AnchorWgt_default = 0
+                NonAnchorWgt_default = 0
+                MiscWgt_default = 0
+                AnchorMaxPoints_default = 0
+                NonAnchorMaxPoints_default = 0
+                EpicMinEffortPoints_default = 0
+            with mcol1:
+                # Create the form inside a div with the custom class
+                with st.form(key='config_form'):
+                    st.markdown('<div class="custom-form">', unsafe_allow_html=True)
+                    #st.write("Project Weightage")
+                    with st.container():
+                        with st.popover("Type Weights"):
+                        # Input fields will be stacked vertically inside the container
+                            MiscWgt = st.number_input("Miscellaneous Weight", min_value=0, value=MiscWgt_default,step=1, format="%d")
+                            AnchorWgt = st.number_input("Anchor Weight", min_value=0, value=AnchorWgt_default, step=1, format="%d")
+                            NonAnchorWgt = st.number_input("Non-Anchor Weight", min_value=0, value=(100-AnchorWgt), step=1, format="%d", disabled=True)
+                        st.divider()
+                        with st.popover("Max Points "):                     
+                            AnchorMaxPoints = st.number_input("Anchor Max Effort Points", min_value=0,  value=AnchorMaxPoints_default,  step=1, format="%d")
+                            NonAnchorMaxPoints = st.number_input("Non-Anchor Effort Max Points", min_value=0, value=NonAnchorMaxPoints_default , step=1, format="%d")
+                        st.divider()
+                        with st.popover("Min Points "):   
+                            EpicMinEffortPoints = st.number_input("Epic Min Effort Points", min_value=0,value=EpicMinEffortPoints_default, step=1, format="%d")
+                        
+                        # Submit button at the end
+                        st.divider()
+                        submit_button = st.form_submit_button(label="Forecast")
+                        st.markdown('</div>', unsafe_allow_html=True)
+                        if submit_button:
+                            add_config_to_db(AnchorWgt, NonAnchorWgt, MiscWgt, AnchorMaxPoints, NonAnchorMaxPoints, EpicMinEffortPoints)
+                        # Recompute the updated forecast data based on the new configuration
+                            anchor_project_df, non_anchor_project_df = du.get_project_data()
+                            
+                            upcoming_sprint_data = du.get_upcoming_sprints_with_effortpoints_and_weightage()
+
+                            # Update session state with new forecast data for projects
+                            st.session_state.updated_forecast_df = du.distribute_epics_to_sprints(anchor_project_df, non_anchor_project_df, upcoming_sprint_data)
+                            # st.rerun()
+                            # st.toast("Forecast updated successfully!")
+            # Create the form inside a div with the custom class
+            with mcol2:
+            #  st.write("Project Forecast")
+                df = fetch_data_from_db("Projects")
+                df = df[["Title", "State", "Anchor_Project", "Priority_Traffic_Ops","Fiscal_Year","Funding_Source","Route_Type","Scoping_30_Percent","SeventyFivePercentComplete","Intermediate_Date","QAQC_Submittal_Date","Document_Submittal_Date"]]
+        
+
+
+
+                tabs = st.tabs(["Projects"])
+            
+                with tabs[0]:
+
+                    anchor_project_df, non_anchor_project_df = du.get_project_data()
+                    upcoming_sprint_data = du.get_upcoming_sprints_with_effortpoints_and_weightage()
+                    allocation = du.distribute_epics_to_sprints(anchor_project_df, non_anchor_project_df, upcoming_sprint_data)
+                    st.session_state.updated_forecast_df = allocation
+                    st.dataframe(st.session_state.updated_forecast_df,    hide_index=True)
+                    
+                    
+
+                    #st.write(grid_return)
+        
+            st.write("Epic Status")
+        
+        
+            # st.write("anchor")
+            # st.write(anchor_project_df)
+            # st.write("non-anchor")
+            # st.write(non_anchor_project_df)
+        
+            # st.write("Sprint Allocation")
+            # st.write(allocation)
+            st.write("Upcoming Sprint Data")
+            st.write(upcoming_sprint_data) 
+            st.write("Anchor")
+            st.write(anchor_project_df)
+            st.write("Non Anchor")
+            st.write(non_anchor_project_df)
         #data = fetch_data_from_db("Epics")     
     #     data = {
     #     "epic": ["Epic-001"],
@@ -764,22 +770,30 @@ def main_application():
         # Add Leave button in the top-right corner
         add_leave_button = st.button("Add Leave", key="add_leave_button", help="Click to add leave")
 
-        # Show the Total Leaves section
-        st.write("### Total Leaves")
 
-        # Fetch leaves data
+
+            # Fetch leaves data
         leaves_df = fetch_leaves_from_db()
 
+       
+        
         if not leaves_df.empty:
+            # Display the column headers using st.columns
+            header1, header2, header3, header4 = st.columns([1, 1, 1, 1])
+            header1.write("*Name*")
+            header2.write("*Leave From*")
+            header3.write("*Leave To*")
+            header4.write("*Actions*")
+
             # Display each row with a delete button
             for i, row in leaves_df.iterrows():
-                col1, col2, col3, col4, col5 = st.columns([2, 2, 2, 2, 1])
+                col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
                 col1.write(row["name"])
                 col2.write(row["leave_from"])
                 col3.write(row["leave_to"])
-                
-                # Add delete button
-                delete_button = col5.button("Delete", key=f"delete_{row['id']}")
+
+                # Add a delete button in the last column
+                delete_button = col4.button("Delete", key=f"delete_{row['id']}")
                 
                 if delete_button:
                     delete_leave_from_db(row["id"])
@@ -819,7 +833,7 @@ def main_application():
 
                 else:
                     st.write("No users available.")
-    elif st.session_state.page == 'Users':
+    elif st.session_state.page == 'Resources':
         st.markdown(""" <style>
                     .UserManage {
                     color: #ADD8E6;
@@ -843,49 +857,36 @@ def main_application():
                     """, unsafe_allow_html=True)
         htmluserstr = """
 <div class='UserManage'>
-<span>User Management</span>
+<span>Resource Management</span>
 </div>
 """ 
         st.html(htmluserstr)
-        #st.title("User Management")
-        tab1, tab2 = st.tabs(["Create User", "All Users"])
+        tab2,tab1  = st.tabs(["All Resources", "Add Resources (Slingshots only)"])
 
-        with tab1:
-            # Create a form for user creation
-            with st.form(key='user_form'):
-                name = st.text_input("Name", max_chars=50)
-                email = st.text_input("Email", max_chars=100)
-                role = st.selectbox("Role", ["Admin", "Viewer", "Editor"])
-                #active_status = st.checkbox("Active Status", value=True)
+        # with tab1:
+        #     # Create a form for user creation
+        #     with st.form(key='user_form'):
+        #         name = st.text_input("Name", max_chars=50)
+        #         email = st.text_input("Email", max_chars=100)
+        #         role = st.selectbox("Role", ["Admin", "Viewer", "Editor"])
+        #         #active_status = st.checkbox("Active Status", value=True)
                 
-                # Submit button
-                submit_button = st.form_submit_button(label="Create User")
+        #         # Submit button
+        #         submit_button = st.form_submit_button(label="Create User")
                 
-                if submit_button:
-                    add_user_to_db(name, email, role)
+        #         if submit_button:
+        #             add_user_to_db(name, email, role)
         with tab2:   
         # Display existing users
             conn = sqlite3.connect('NDOTDATA.db')
-            users = pd.read_sql("SELECT * FROM users", conn)
-            conn.close()
+            users = pd.read_sql("SELECT name, email FROM users", conn)
+            conn.close()    
             
-            st.subheader("Existing Users")
+            st.subheader("Existing Resources")
             
             if not users.empty:
-                for index, row in users.iterrows():
-                    col1, col2, col3, col4, col5 = st.columns([2, 3, 3, 2, 1])
-                    
-                    # # Display the user information
-                    # col1.write(row["id"])
-                    col2.write(row["name"])
-                    col3.write(row["email"])
-                    col4.write(row["role"])
-                    
-                    delete_button = col5.button("Del", key=row["id"])
-                    if delete_button:
-                        delete_user_from_db(row["id"])
-                        st.rerun()  # Refresh the app after deletion
-
+                usersdf = pd.DataFrame(users)
+                st.dataframe(usersdf,  use_container_width=True,  hide_index=True)
             else:
                 st.write("No users found.")
 
@@ -987,13 +988,19 @@ def main_application():
         with tab1:
             holidays_df = fetch_holidays_from_db()  # Fetch all holidays
 
-            st.write("### List of All Holidays")
+     
             holidays_df = holidays_df[["holiday_name", "holiday_date"]]
 
             if not holidays_df.empty:
+                # Display column headers
+                col1, col2, col3 = st.columns([2, 2, 1])
+                col1.write("*Holiday Name*")
+                col2.write("*Holiday Date*")
+                col3.write("*Actions*")
+
                 # Display each row with a delete button
                 for i, row in holidays_df.iterrows():
-                    col1, col2, col3 = st.columns([3, 3, 1])
+                    col1, col2, col3 = st.columns([2, 2, 1])
                     col1.write(row["holiday_name"])
                     col2.write(row["holiday_date"])
 
@@ -1249,3 +1256,4 @@ if not st.session_state['logged_in']:
     login_screen()
 else:
     main_application()
+   
