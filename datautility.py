@@ -159,7 +159,10 @@ def distribute_epics_to_sprints(anchor_projects_df, non_anchor_projects_df, upco
         sprint_allocations[sprint_name]['remaining_non_anchor_effort'] = sprint['NonAnchorEffortPoints']
 
     # Function to allocate effort for a set of projects (either anchor or non-anchor)
-    def allocate_projects(projects_df, effort_col, project_type):
+    def allocate_projects(projects_df, project_type):
+        # Determine the appropriate project-wise maximum effort column based on project type
+        max_effort_per_sprint_column = 'MaxAnchorEffortPointspersprint' if project_type == 'anchor' else 'MaxNonAnchorEffortPointspersprint'
+
         for _, epic in projects_df.iterrows():
             remaining_effort = epic['total_effort_from_pbis']
             nearest_due_date = pd.to_datetime(epic['nearest_doc_date']).tz_localize(None) if not pd.isnull(epic['nearest_doc_date']) else None
@@ -171,15 +174,15 @@ def distribute_epics_to_sprints(anchor_projects_df, non_anchor_projects_df, upco
                 sprint_start_date = pd.to_datetime(sprint['Start_date']).tz_localize(None)
                 sprint_end_date = pd.to_datetime(sprint['End_date']).tz_localize(None)
 
-                # Project-wise maximum effort points for this sprint
-                max_project_effort_per_sprint = sprint['MaxAnchorEffortPointspersprint']
+                # Project-wise maximum effort points for this sprint (specific to anchor or non-anchor)
+                max_project_effort_per_sprint = sprint[max_effort_per_sprint_column]
                 
                 # Calculate average effort per remaining sprints to ensure balanced distribution
                 sprints_remaining = len(upcoming_sprints_df[upcoming_sprints_df['Iteration'] >= sprint_name])
                 avg_effort_per_sprint = remaining_effort / sprints_remaining
 
                 # Ensure average meets minimum required or that epic is due soon
-                if avg_effort_per_sprint < min_epic_effort and (not nearest_due_date or sprint_start_date > nearest_due_date):  
+                if avg_effort_per_sprint < min_epic_effort and (not nearest_due_date or sprint_start_date > nearest_due_date):
                     continue
                 
                 # Determine the remaining sprint capacity and cap it by project-wise and sprint-wise maximums
@@ -200,8 +203,8 @@ def distribute_epics_to_sprints(anchor_projects_df, non_anchor_projects_df, upco
                         break
 
     # Allocate efforts for anchor and non-anchor projects separately
-    allocate_projects(anchor_projects_df, 'AnchorEffortPoints', 'anchor')
-    allocate_projects(non_anchor_projects_df, 'NonAnchorEffortPoints', 'non_anchor')
+    allocate_projects(anchor_projects_df, 'anchor')
+    allocate_projects(non_anchor_projects_df, 'non_anchor')
 
     # Convert allocations to a list of dictionaries for each sprint with combined data in each cell
     allocation_results = []
@@ -212,10 +215,11 @@ def distribute_epics_to_sprints(anchor_projects_df, non_anchor_projects_df, upco
                     'Sprint': sprint_name,
                     'Effort': item['project_epic_effort']
                 })
-
+    print(allocation_results)
     # Create DataFrame and pivot it so that each sprint is a column with combined efforts in each cell
     allocations_df = pd.DataFrame(allocation_results)
     pivot_df = allocations_df.pivot(columns='Sprint', values='Effort').reset_index(drop=True)
+   
     df_uniform = pivot_df.apply(lambda x: pd.Series(x.dropna().values), axis=0)
     # Apply formatting for overdue items in red
     def highlight_overdue(val):
@@ -225,7 +229,6 @@ def distribute_epics_to_sprints(anchor_projects_df, non_anchor_projects_df, upco
 
     # Return the styled pivot table with no index column displayed
     return df_uniform.style.applymap(highlight_overdue, subset=df_uniform.columns)
-
 # Sample usage
 # formatted_df = distribute_epics_to_sprints(anchor_projects_df, non_anchor_projects_df, upcoming_sprints_df)
 # formatted_df  # Display the styled pivot table without the extra index column
@@ -304,10 +307,12 @@ def get_project_data():
 
     # Rename effort column for clarity
     aggregated_df = aggregated_df.rename(columns={'pbis_Microsoft_VSTS_Scheduling_Effort': 'total_effort_from_pbis'})
+
+    # aggregated_df.to_excel('work_items_latest.xlsx', index=False)
     
      # Define conditions and corresponding choices for nearest_doc_date
     conditions = [
-        aggregated_df['epics_System_Title'].str.contains('QAQC', case=False, na=False),
+        aggregated_df['epics_System_Title'].str.contains('QAQC|QA/QC', case=False, na=False),
         aggregated_df['epics_System_Title'].str.contains('30%|Preliminary', case=False, na=False),
         aggregated_df['epics_System_Title'].str.contains('Intermediate', case=False, na=False),
         aggregated_df['epics_System_Title'].str.contains('75%', case=False, na=False),
