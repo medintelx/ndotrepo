@@ -7,7 +7,7 @@ import os
 # load_dotenv()
 
 # DB_PATH = os.getenv('DB_PATH')
-db_path='NDOTDATA.DB'
+db_path='NDOTDATA.db'
 def calculate_days_overlap_exclude_weekends(start1, end1, start2, end2):
     """Calculate the number of overlapping weekdays (excluding Saturdays and Sundays) between two date ranges."""
     start_date = max(start1, start2)
