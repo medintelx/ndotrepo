@@ -533,7 +533,9 @@ def main_application():
         st.session_state.page = 'Home'
     if 'updated_forecast_df' not in st.session_state:
         st.session_state.updated_forecast_df = pd.DataFrame()  # Initialize empty dataframe in session state
-
+    if 'selected_project_details' not in st.session_state:
+        st.session_state.selected_project_details = pd.DataFrame()  # Initialize empty dataframe in session state
+        
 
     # Sidebar styling
     st.sidebar.markdown(
