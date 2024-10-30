@@ -11,12 +11,15 @@ import calendar
 from streamlit_modal import Modal
 #from streamlit_timeline import st_timeline
 #from streamlit_timeline import timeline
-from st_aggrid import AgGrid, GridOptionsBuilder
+from st_aggrid import AgGrid, GridOptionsBuilder, AgGridTheme
 import pandas as pd
 import datautility as du
+from st_table_select_cell import st_table_select_cell
+from dotenv import load_dotenv
+load_dotenv()
 
 
-
+DB_PATH = os.getenv('DB_PATH')
 # st.markdown("""
 #     <style>
 #         .reportview-container {
@@ -276,6 +279,17 @@ def delete_user_from_db(user_id):
     conn.close()
     st.success(f"User with ID {user_id} has been deleted.")
 
+#fetch latest config
+def fetch_latest_config():
+    conn = sqlite3.connect('NDOTDATA.db')
+    query = '''
+        SELECT AnchorWgt, NonAnchorWgt, MiscWgt, AnchorMaxPoints, NonAnchorMaxPoints, EpicMinEffortPoints 
+        FROM weightageconfig
+        ORDER BY modifiedtime DESC LIMIT 1
+    '''
+    config = pd.read_sql(query, conn)
+    conn.close()
+    return config.iloc[0] if not config.empty else None
 
 # Function to insert a new configuration if none exists, or update the existing one
 def add_config_to_db(AnchorWgt,NonAnchorWgt, MiscWgt, AnchorMaxPoints, NonAnchorMaxPoints, EpicMinEffortPoints):
@@ -441,33 +455,71 @@ LEFT JOIN productbacklogitems pbi ON pbi.System_Parent = f.system_Id;
     
     return joined_df
 
-# Function to display a styled calendar for a specific month and year
-def display_styled_calendar(month, year, holidays_df):
-    cal = calendar.HTMLCalendar()
+# Custom HTMLCalendar subclass to start week on Wednesday
+class CustomCalendar(calendar.HTMLCalendar):
+    def __init__(self, firstweekday=2):  # 2 represents Wednesday
+        super().__init__(firstweekday=firstweekday)
 
-    # Convert the holiday dates to list of datetime.date
+
+# Function to display styled calendar with holidays and weekends
+def display_styled_calendar(month, year, holidays_df):
+    cal = CustomCalendar()  # Use the custom calendar, starting on Wednesday
+
+    # Convert the holiday dates to a list of datetime.date
     holiday_dates = pd.to_datetime(holidays_df['holiday_date']).dt.date.tolist()
 
     # Generate the calendar HTML for the specified month and year
     month_calendar = cal.formatmonth(year, month)
 
-    # Highlight holidays by modifying the HTML of the calendar
-    for holiday in holiday_dates:
-        if holiday.year == year and holiday.month == month:
-            # Highlight the holiday date
-            month_calendar = month_calendar.replace(f">{holiday.day}<", f' style="background-color: #FFDDC1;">{holiday.day}<')  # Orange for holidays
-
-    # Highlight weekends (Saturday and Sunday)
-    for day in range(1, 32):
+    # Highlight holidays and weekends by modifying the HTML of the calendar
+    for day in range(1, 32):  # Loop through all possible days in a month
         try:
-            date = datetime(year, month, day)
-            if date.weekday() == 5 or date.weekday() == 6:  # 5=Saturday, 6=Sunday
-                month_calendar = month_calendar.replace(f">{day}<", f' style="background-color: #FFDDC1;">{day}<')  # Light green for weekends
+            date = datetime(year, month, day).date()
+            
+            # Check if the date is a holiday
+            if date in holiday_dates:
+                month_calendar = month_calendar.replace(f">{day}<", f' style="background-color: #FFDDC1;">{day}<')  # Orange for holidays
+
+            # Check if the date is a Saturday or Sunday
+            elif date.weekday() == 5:  # Saturday
+                month_calendar = month_calendar.replace(f">{day}<", f' style="background-color: #FFDDC1;">{day}<')  # Orange for Saturday
+            elif date.weekday() == 6:  # Sunday
+                month_calendar = month_calendar.replace(f">{day}<", f' style="background-color: #FFDDC1;">{day}<')  # Orange for Sunday
+
         except ValueError:
-            pass  # Ignore invalid dates
+            pass  # Ignore invalid dates (e.g., February 30)
 
     # Display the styled calendar using Streamlit's Markdown component
     st.markdown(month_calendar, unsafe_allow_html=True)
+
+
+# # Function to display a styled calendar for a specific month and year
+# def display_styled_calendar(month, year, holidays_df):
+#     cal = calendar.HTMLCalendar()
+
+#     # Convert the holiday dates to list of datetime.date
+#     holiday_dates = pd.to_datetime(holidays_df['holiday_date']).dt.date.tolist()
+
+#     # Generate the calendar HTML for the specified month and year
+#     month_calendar = cal.formatmonth(year, month)
+
+#     # Highlight holidays by modifying the HTML of the calendar
+#     for holiday in holiday_dates:
+#         if holiday.year == year and holiday.month == month:
+#             # Highlight the holiday date
+#             month_calendar = month_calendar.replace(f">{holiday.day}<", f' style="background-color: #FFDDC1;">{holiday.day}<')  # Orange for holidays
+
+#     # Highlight weekends (Saturday and Sunday)
+#     for day in range(1, 32):
+#         try:
+#             date = datetime(year, month, day)
+#             if date.weekday() == 5 or date.weekday() == 6:  # 5=Saturday, 6=Sunday
+#                 month_calendar = month_calendar.replace(f">{day}<", f' style="background-color: #FFDDC1;">{day}<')  # Light green for weekends
+#         except ValueError:
+#             pass  # Ignore invalid dates
+
+#     # Display the styled calendar using Streamlit's Markdown component
+#     st.markdown(month_calendar, unsafe_allow_html=True)
 
 # Initialize year and month to the current date
 today = datetime.now()
@@ -555,7 +607,7 @@ def main_application():
     st.sidebar.image("slingshot.png")
     htmlstr = """
 <div class='Apptitle'>
-<span>SLIngshots!</span>
+<span>&nbsp;&nbsp;&nbsp;SLIngshots!</span>
 </div>
 """
 
@@ -568,10 +620,10 @@ def main_application():
         st.session_state.page = 'Home'
     # if st.sidebar.button('📊 Dashboard', key='dashboard'):
     #     st.session_state.page = 'Dashboard'
-    if st.sidebar.button('📅 Leaves', key='leaves'):
-        st.session_state.page = 'Leaves'
     if st.sidebar.button('👤 Resources', key='resources'):
         st.session_state.page = 'Resources'
+    if st.sidebar.button('📅 Leaves', key='leaves'):
+        st.session_state.page = 'Leaves'
     if st.sidebar.button('🎄 Holidays', key='holiday'):
         st.session_state.page = 'Holidays'
     if st.sidebar.button('⚙️ Settings', key='settings'):
@@ -694,12 +746,10 @@ def main_application():
                     anchor_project_df, non_anchor_project_df = du.get_project_data()
                     upcoming_sprint_data = du.get_upcoming_sprints_with_effortpoints_and_weightage()
                     allocation = du.distribute_epics_to_sprints(anchor_project_df, non_anchor_project_df, upcoming_sprint_data)
-                    st.session_state.updated_forecast_df = allocation
-                    st.dataframe(st.session_state.updated_forecast_df,    hide_index=True)
+                    #st.write(allocation)
+                    df = st.session_state.updated_forecast_df = allocation
+                    st.dataframe(st.session_state.updated_forecast_df,    hide_index=True, on_select="rerun")
                     
-                    
-
-                    #st.write(grid_return)
         
             st.write("Epic Status")
         
@@ -779,33 +829,53 @@ def main_application():
         
         if not leaves_df.empty:
             # Display the column headers using st.columns
-            header1, header2, header3, header4 = st.columns([1, 1, 1, 1])
+            header1, header2, header3, header5= st.columns([1, 1,1,1])
             header1.write("*Name*")
             header2.write("*Leave From*")
             header3.write("*Leave To*")
-            header4.write("*Actions*")
+            #header4.write("*Edit Actions*")
+            header5.write("*Delete Actions*")
 
-            # Display each row with a delete button
             for i, row in leaves_df.iterrows():
-                col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
+                col1, col2, col3, col5 = st.columns([1, 1, 1, 1])
                 col1.write(row["name"])
                 col2.write(row["leave_from"])
                 col3.write(row["leave_to"])
 
-                # Add a delete button in the last column
-                delete_button = col4.button("Delete", key=f"delete_{row['id']}")
-                
+
+                # Add Edit button
+                # edit_button = col4.button("Edit", key=f"edit_{row['id']}")
+                # if edit_button:
+                #     st.session_state["edit_leave_id"] = row["id"]
+                #     st.session_state["edit_leave_from"] = row["leave_from"]
+                #     st.session_state["edit_leave_to"] = row["leave_to"]
+                #     modal.open()  # Open edit modal
+
+                # Add Delete button
+                delete_button = col5.button("Delete", key=f"delete_{row['id']}")
                 if delete_button:
                     delete_leave_from_db(row["id"])
-                    st.success(f"Leave record for {row['name']} deleted.")
-                    st.rerun()  # Refresh the page to reflect changes
+                    st.success("Leave deleted successfully!")
+                    st.rerun()  # Refresh to reflect changes
         else:
             st.write("No leave records found.")
 
         # Trigger modal when Add Leave button is clicked
         if add_leave_button:
             modal.open()
+        if modal.is_open() and "edit_leave_id" in st.session_state:
+            with modal.container():
+                st.write("Edit Leave")
 
+                with st.form(key='edit_leave_form'):
+                    leave_from = st.date_input("Leave From", value=st.session_state["edit_leave_from"])
+                    leave_to = st.date_input("Leave To", value=st.session_state["edit_leave_to"])
+                    submit_button = st.form_submit_button(label="Update Leave")
+
+                    if submit_button:
+                        update_leave_in_db(st.session_state["edit_leave_id"], leave_from, leave_to)
+                        st.success("Leave updated successfully!")
+                        st.rerun()  # Refresh to display updated leave
         if modal.is_open():
             with modal.container():
                 
@@ -1015,26 +1085,68 @@ def main_application():
                 st.write("No holidays found.")
 
     elif st.session_state.page == 'Settings':
-        st.title("Settings")
-        st.write("Manage application settings.")
+        st.markdown(""" <style>
+                    .weightManage {
+                    color: #ADD8E6;
+                    font-size: 20px;
+                    font-weight: bold;  
+                    }
+                   
+                     div.stMainBlockContainer.block-container.st-emotion-cache-1jicfl2.ea3mdgi5 {
+                    padding-top: 2rem !important;
+                    padding-left: 2rem !important;
+                    font-size: 12px;
+        }
+        div.stVerticalBlock.st-emotion-cache-2ajiip.e1f1d6gn2{
+                    gap:0;
+        }
+        dev.stForm.st-emotion-cache-4uzi61.e10yg2by1{
+                    background-color:  #ADD8E6 !important;
+        }
+                    }
+                    </style>
+                    """, unsafe_allow_html=True)
+
+     # Title for Leave Management
+        htmlleavestr = """
+<div class='weightManage'>
+<span>Settings</span>
+</div>
+""" 
+        st.html(htmlleavestr)
         st.title("Weightage Configurations")
 
-        # Create a form for entering weightage configuration
+            # Reset the configuration data in session state if not already set
+        if "config_data" not in st.session_state:
+            st.session_state.config_data = fetch_latest_config()
+        
+        config = st.session_state.config_data  # Retrieve configuration from session state
+
+        # Set default values from session state if available, otherwise use fallback values
+        AnchorWgt_default = config['AnchorWgt'] if config is not None else 0
+        NonAnchorWgt_default = config['NonAnchorWgt'] if config is not None else 0
+        MiscWgt_default = config['MiscWgt'] if config is not None else 0
+        AnchorMaxPoints_default = config['AnchorMaxPoints'] if config is not None else 0
+        NonAnchorMaxPoints_default = config['NonAnchorMaxPoints'] if config is not None else 0
+        EpicMinEffortPoints_default = config['EpicMinEffortPoints'] if config is not None else 0
+
+        # Display the form with prepopulated data
         with st.form(key='config_form'):
-            AnchorWgt = st.number_input("Anchor Weight", min_value=0, step=1, format="%d")
-           # NonAnchorWgt = st.number_input("Non-Anchor Weight", value = (100 - AnchorWgt), format="%.2f", disabled=True)
-            MiscWgt = st.number_input("Miscellaneous Weight", min_value=0, step=1, format="%d")
-            AnchorMaxPoints = st.number_input("Anchor Max Points", min_value=0, step=1, format="%d")
-            NonAnchorMaxPoints = st.number_input("Non-Anchor Max Points", min_value=0, step=1, format="%d")
-            EpicMinEffortPoints = st.number_input("Epic Min Effort Points", min_value=0, step=1, format="%d")
-            NonAnchorWgt = 100 - AnchorWgt
-            # Submit button
+            AnchorWgt = st.number_input("Anchor Weight", min_value=0, value=AnchorWgt_default, step=1)
+            NonAnchorWgt = st.number_input("Non-Anchor Weight", min_value=0, value=NonAnchorWgt_default, step=1, disabled=True)
+            MiscWgt = st.number_input("Miscellaneous Weight", min_value=0, value=MiscWgt_default, step=1)
+            AnchorMaxPoints = st.number_input("Anchor Max Points", min_value=0, value=AnchorMaxPoints_default, step=1)
+            NonAnchorMaxPoints = st.number_input("Non-Anchor Max Points", min_value=0, value=NonAnchorMaxPoints_default, step=1)
+            EpicMinEffortPoints = st.number_input("Epic Min Effort Points", min_value=0, value=EpicMinEffortPoints_default, step=1)
+            
             submit_button = st.form_submit_button(label="Save Configuration")
             
             if submit_button:
+                # Save data back to the database (replace this with your existing update logic)
                 add_config_to_db(AnchorWgt, NonAnchorWgt, MiscWgt, AnchorMaxPoints, NonAnchorMaxPoints, EpicMinEffortPoints)
- 
-        
+                # Update session state with new config to reflect changes without leaving the page
+                st.session_state.config_data = fetch_latest_config()
+                st.rerun()
     #menu = st.sidebar.selectbox("Menu", ["Work Items", "Users", "Config", "Leaves", "Holidays", "Forecast"])
 
     # if st.session_state.page == 'Leaves':
