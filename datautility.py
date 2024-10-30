@@ -2,10 +2,12 @@ import pandas as pd
 import sqlite3
 from datetime import datetime, timedelta
 import numpy as np
+import os
+from dotenv import load_dotenv
+load_dotenv()
 
-# Connect to the SQLite database
-db_path = 'NDOTDATA.db'
-
+DB_PATH = os.getenv('DB_PATH')
+db_path='NDOTDATA.DB'
 def calculate_days_overlap_exclude_weekends(start1, end1, start2, end2):
     """Calculate the number of overlapping weekdays (excluding Saturdays and Sundays) between two date ranges."""
     start_date = max(start1, start2)
@@ -191,7 +193,7 @@ def distribute_epics_to_sprints(anchor_projects_df, non_anchor_projects_df, upco
 
                 # Allocate effort to this sprint within both project-wise and sprint-wise limits
                 if allocated_effort > 0:
-                    effort_text = f"{epic['projects_Work_Item_ID']} - {epic['epics_System_Title']} ({allocated_effort}{' overdue' if nearest_due_date and sprint_end_date > nearest_due_date else ''})"
+                    effort_text = f"{int(epic['projects_Work_Item_ID'])} ({'A' if project_type=='anchor'  else 'NA'}) - {epic['epics_System_Title']} ({allocated_effort}{' overdue' if nearest_due_date and sprint_end_date > nearest_due_date else ''})"
                     sprint_allocations[sprint_name][project_type].append({'project_epic_effort': effort_text})
                     
                     # Update remaining capacity and remaining effort
@@ -228,7 +230,9 @@ def distribute_epics_to_sprints(anchor_projects_df, non_anchor_projects_df, upco
         return ''
 
     # Return the styled pivot table with no index column displayed
-    return df_uniform.style.applymap(highlight_overdue, subset=df_uniform.columns)
+    #return df_uniform.style.applymap(highlight_overdue, subset=df_uniform.columns)
+    return df_uniform,anchor_projects_df,non_anchor_projects_df
+  
 # Sample usage
 # formatted_df = distribute_epics_to_sprints(anchor_projects_df, non_anchor_projects_df, upcoming_sprints_df)
 # formatted_df  # Display the styled pivot table without the extra index column
@@ -240,7 +244,7 @@ def distribute_epics_to_sprints(anchor_projects_df, non_anchor_projects_df, upco
 def get_project_data():
     # Define the SQL queries to select only the required columns
     projects_query = """
-    SELECT Work_Item_ID, Iteration_Path, Work_Item_Type, State, Scoping_30_Percent, SeventyFivePercentComplete, 
+    SELECT Work_Item_ID, title, EA_Number, Iteration_Path, Work_Item_Type, State, Scoping_30_Percent, SeventyFivePercentComplete, 
     Intermediate_Date, QAQC_Submittal_Date, Document_Submittal_Date, Priority_Traffic_Ops, Fiscal_Year, Funding_Source, 
     Route_Type, Construction_EA_Number, Official_DOC_Date, Anchor_Project, Complexity_Signals, Complexity_Lighting, 
     Complexity_ITS, Complexity_Power_Design, Complexity_RoW_Coordination, Complexity_SLI_Project_Lead, 
@@ -299,7 +303,7 @@ def get_project_data():
     
     # Sum efforts from product backlog items grouped by Project, Epic, and Feature, including Epic title
     aggregated_df = merged_df.groupby(
-        ['projects_Work_Item_ID', 'epics_System_Id', 'epics_System_Title'], as_index=False
+        ['projects_Work_Item_ID', 'epics_System_Id', 'epics_System_Title', 'projects_Title','projects_EA_Number'], as_index=False
     ).agg({
         'pbis_Microsoft_VSTS_Scheduling_Effort': 'sum',  # Summing effort from PBIs
         **{col: 'first' for col in projects_df.columns}  # Keep all project columns
@@ -308,7 +312,7 @@ def get_project_data():
     # Rename effort column for clarity
     aggregated_df = aggregated_df.rename(columns={'pbis_Microsoft_VSTS_Scheduling_Effort': 'total_effort_from_pbis'})
 
-    # aggregated_df.to_excel('work_items_latest.xlsx', index=False)
+    #aggregated_df.to_excel('work_items_latest_one.xlsx', index=False)
     
      # Define conditions and corresponding choices for nearest_doc_date
     conditions = [
