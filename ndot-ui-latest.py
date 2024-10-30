@@ -14,6 +14,7 @@ from streamlit_modal import Modal
 from st_aggrid import AgGrid, GridOptionsBuilder, AgGridTheme
 import pandas as pd
 import datautility as du
+from st_table_select_cell import st_table_select_cell
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -744,16 +745,69 @@ def main_application():
 
                     anchor_project_df, non_anchor_project_df = du.get_project_data()
                     upcoming_sprint_data = du.get_upcoming_sprints_with_effortpoints_and_weightage()
-                    allocation = du.distribute_epics_to_sprints(anchor_project_df, non_anchor_project_df, upcoming_sprint_data)
+                    allocation,anchor_projects_df,non_anchor_projects_df = du.distribute_epics_to_sprints(anchor_project_df, non_anchor_project_df, upcoming_sprint_data)
                     #st.write(allocation)
                     df = st.session_state.updated_forecast_df = allocation
-                    st.dataframe(st.session_state.updated_forecast_df,    hide_index=True, on_select="rerun")
-                    
+                    #st.dataframe(st.session_state.updated_forecast_df,    hide_index=True, on_select="rerun")
+                    # Display the dataframe with single-column selection enabled
+                    selection_event = st.dataframe(
+                        df,
+                        selection_mode="single-column",
+                        on_select="rerun",
+                        use_container_width=True,
+                        hide_index=True
+                    )
+
+                # Prepare an empty list to collect project details
+                    project_details = []
+
+                    # Check if a column is selected
+                    if selection_event and selection_event.selection.get('columns'):
+                        selected_column = selection_event.selection['columns'][0]
+                        
+                        # Iterate over selected column values
+                        for index, value in df[selected_column].items():
+                            # Extract ID and type (A for Anchor, NA for Non-Anchor) from the column value
+                            if isinstance(value, str):
+                                # Parse `value` for project ID, A/NA designation, epic title, and effort points
+                                try:
+                                    project_id = int(value.split()[0])  # Extract project ID
+                                    designation = value.split("(")[1].split(")")[0]  # Extract "A" or "NA"
+                                    epic_title = value.split(" - ")[1].split(" (")[0]  # Extract epic title
+
+                                    # Select the relevant DataFrame based on designation
+                                    relevant_df = anchor_projects_df if designation == "A" else non_anchor_projects_df
+                                    
+                                    # Filter the relevant DataFrame for the selected project ID and Epic Title
+                                    project_info = relevant_df[
+                                        (relevant_df['projects_Work_Item_ID'] == project_id) &
+                                        (relevant_df['epics_System_Title'] == epic_title)
+                                    ]
+
+                                    # Append project details to the list if found
+                                    if not project_info.empty:
+                                        project_details.append({
+                                            "Project ID": project_info['projects_Work_Item_ID'].values[0],
+                                            "Project Title": project_info['projects_Title'].values[0],
+                                            "Epic Title": project_info['epics_System_Title'].values[0],
+                                            "Total Effort Points": project_info['total_effort_from_pbis'].values[0],
+                                            "Nearest Due Date": project_info['nearest_doc_date'].values[0],
+                                            "Sprint": selected_column
+                                        })
+                                except (IndexError, ValueError):
+                                    st.write("Error parsing value:", value)
+                                    continue
+                    # Convert the list to a DataFrame
+                    if project_details:
+                        details_df = pd.DataFrame(project_details)
+                        st.session_state['selected_project_details'] = details_df 
+                        
         
-            st.write("Epic Status")
+          
         
         
-            # st.write("anchor")
+            st.write("Epic status")
+            st.dataframe(st.session_state['selected_project_details'], hide_index=True) 
             # st.write(anchor_project_df)
             # st.write("non-anchor")
             # st.write(non_anchor_project_df)
