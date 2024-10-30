@@ -606,7 +606,7 @@ def main_application():
     st.sidebar.image("slingshot.png")
     htmlstr = """
 <div class='Apptitle'>
-<span>&nbsp;&nbsp;&nbsp;SLIngshots!</span>
+<span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SLIngshots!</span>
 </div>
 """
 
