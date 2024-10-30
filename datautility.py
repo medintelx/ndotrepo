@@ -3,10 +3,10 @@ import sqlite3
 from datetime import datetime, timedelta
 import numpy as np
 import os
-from dotenv import load_dotenv
-load_dotenv()
+#from dotenv import load_dotenv
+# load_dotenv()
 
-DB_PATH = os.getenv('DB_PATH')
+# DB_PATH = os.getenv('DB_PATH')
 db_path='NDOTDATA.DB'
 def calculate_days_overlap_exclude_weekends(start1, end1, start2, end2):
     """Calculate the number of overlapping weekdays (excluding Saturdays and Sundays) between two date ranges."""
