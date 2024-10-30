@@ -808,7 +808,8 @@ def main_application():
         
         
             st.write("Epic status")
-            st.dataframe(st.session_state['selected_project_details'], hide_index=True) 
+            if not st.session_state['selected_project_details'].empty:
+                st.dataframe(st.session_state['selected_project_details'], hide_index=True)
             # st.write(anchor_project_df)
             # st.write("non-anchor")
             # st.write(non_anchor_project_df)
