@@ -14,7 +14,7 @@ from streamlit_modal import Modal
 from st_aggrid import AgGrid, GridOptionsBuilder, AgGridTheme
 import pandas as pd
 import datautility as du
-from st_table_select_cell import st_table_select_cell
+#from st_table_select_cell import st_table_select_cell
 from dotenv import load_dotenv
 load_dotenv()
 
