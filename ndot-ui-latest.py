@@ -14,13 +14,13 @@ from streamlit_modal import Modal
 from st_aggrid import AgGrid, GridOptionsBuilder, AgGridTheme
 import pandas as pd
 import datautility as du
-#from st_table_select_cell import st_table_select_cell
 from dotenv import load_dotenv
+from st_aggrid.shared import GridUpdateMode
 load_dotenv()
 
 
 #DB_PATH = os.getenv('DB_PATH')
-DB_PATH = 'NDOTDATA.db'
+DB_PATH = 'NDOTDATAL.db'
 # st.markdown("""
 #     <style>
 #         .reportview-container {
@@ -993,7 +993,7 @@ def main_application():
 
         with tab1:
             # Create a form for user creation
-            with st.form(key='user_form'):
+            with st.form(key='user_form',  enter_to_submit=False):
                 name = st.text_input("Name", max_chars=50)
                 email = st.text_input("Email", max_chars=100)
                 #role = st.selectbox("Role", ["Admin", "Viewer", "Editor"])
@@ -1001,13 +1001,23 @@ def main_application():
                 
                 # Submit button
                 submit_button = st.form_submit_button(label="Add Resource")
+ 
                 
                 if submit_button:
-                    add_user_to_db(name, email, "Viewer")
+                    # Validation: Check if name or email is empty
+                    if not name.strip():
+                        st.error("Please enter a name.")
+                    elif not email.strip():
+                        st.error("Please enter an email.")
+                    else:
+                        # Proceed to add the user to the database if both fields are filled
+                        add_user_to_db(name, email, "Viewer")
+                        st.success("Resource added successfully!")
         with tab2:   
         # Display existing users
             conn = sqlite3.connect(DB_PATH)
-            users = pd.read_sql("SELECT name, email FROM users where start_date <= datetime('now')", conn)
+            users = pd.read_sql("SELECT name, email FROM users where start_date <= datetime('now') and user_type=0", conn)
+            dummyusers = pd.read_sql("SELECT name, email FROM users where user_type=1", conn)
             conn.close()    
             
             st.subheader("Existing Resources")
@@ -1017,7 +1027,36 @@ def main_application():
                 st.dataframe(usersdf,  use_container_width=True,  hide_index=True)
             else:
                 st.write("No users found.")
+            # Display dummyusers table with delete functionality
+        
 
+            # Display the 'dummyusers' DataFrame if it is not empty with delete option
+            if not dummyusers.empty:
+                st.write("**Newly Added users**")
+                
+                # Display table headers
+                col1, col2, col3 = st.columns([2, 3, 1])
+                col1.write("**Name**")
+                col2.write("**Email**")
+                col3.write("**Delete**")
+
+                # Display each row in the dummyusers DataFrame with a delete button
+                for i, row in dummyusers.iterrows():
+                    col1, col2, col3 = st.columns([2, 3, 1])
+                    col1.write(row["name"])
+                    col2.write(row["email"])
+                    
+                    # Add a delete button for each user
+                    if col3.button("Delete", key=f"delete_{i}"):
+                        # Delete the user from the database
+                        conn = sqlite3.connect(DB_PATH)
+                        conn.execute("DELETE FROM users WHERE email = ?", (row["email"],))
+                        conn.commit()
+                        conn.close()
+                        
+                        st.success(f"Deleted user: {row['name']} ({row['email']})")
+                        st.rerun()  # Refresh the page to reflect change
+               
     elif st.session_state.page == 'Holidays':
         st.markdown(""" <style>
         div.stMainBlockContainer.block-container.st-emotion-cache-1jicfl2.ea3mdgi5 {
