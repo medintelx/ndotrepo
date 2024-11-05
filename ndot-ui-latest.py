@@ -14,11 +14,13 @@ from streamlit_modal import Modal
 from st_aggrid import AgGrid, GridOptionsBuilder, AgGridTheme
 import pandas as pd
 import datautility as du
+from st_table_select_cell import st_table_select_cell
 from dotenv import load_dotenv
 load_dotenv()
 
 
-DB_PATH = os.getenv('DB_PATH')
+#DB_PATH = os.getenv('DB_PATH')
+DB_PATH = 'NDOTDATAL.db'
 # st.markdown("""
 #     <style>
 #         .reportview-container {
@@ -146,7 +148,7 @@ def login_screen():
 
 # Function to initialize the user table in the database
 def init_user_db():
-    conn = sqlite3.connect('NDOTDATA.db')
+    conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     
     # Create users table if it doesn't exist
@@ -179,14 +181,14 @@ init_user_db()
 
 # Function to add a new user to the database
 def add_user_to_db(name, email, role):
-    conn = sqlite3.connect('NDOTDATA.db')
+    conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     
     try:
         cursor.execute('''
-            INSERT INTO users (name, email, role, active_status)
-            VALUES (?, ?, ?, ?)
-        ''', (name, email, role, 0))
+            INSERT INTO users (name, email, role, user_type, start_date)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (name, email, role, 1, datetime.now()))
         conn.commit()
         st.success("User added successfully!")
     except sqlite3.IntegrityError:
@@ -195,7 +197,7 @@ def add_user_to_db(name, email, role):
     conn.close()
 
 def add_leave_to_db(user_id, leave_from, leave_to):
-    conn = sqlite3.connect('NDOTDATA.db')
+    conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     print(user_id)
     cursor.execute('''
@@ -209,7 +211,7 @@ def add_leave_to_db(user_id, leave_from, leave_to):
 
 # Function to fetch all leaves from the database and handle user IDs correctly
 def fetch_leaves_from_db():
-    conn = sqlite3.connect('NDOTDATA.db')
+    conn = sqlite3.connect(DB_PATH)
     today = datetime.today().date()
     
     leaves_df = pd.read_sql(f'''
@@ -224,7 +226,7 @@ def fetch_leaves_from_db():
 
 # Function to delete a leave entry from the database
 def delete_leave_from_db(leave_id):
-    conn = sqlite3.connect('NDOTDATA.db')
+    conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute('DELETE FROM leaves WHERE id = ?', (leave_id,))
     conn.commit()
@@ -232,13 +234,13 @@ def delete_leave_from_db(leave_id):
 
 # Function to fetch all users from the database
 def fetch_users_from_db():
-    conn = sqlite3.connect('NDOTDATA.db')
+    conn = sqlite3.connect(DB_PATH)
     users_df = pd.read_sql("SELECT id, name FROM users", conn)
     conn.close()
     return users_df
 
 def add_or_update_holiday(holiday_name, holiday_date):
-    conn = sqlite3.connect('NDOTDATA.db')
+    conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
 
     try:
@@ -255,14 +257,14 @@ def add_or_update_holiday(holiday_name, holiday_date):
     conn.close()
 
 def fetch_holidays_from_db():
-    conn = sqlite3.connect('NDOTDATA.db')
+    conn = sqlite3.connect(DB_PATH)
     holidays_df = pd.read_sql("SELECT * FROM holidays ORDER BY holiday_date ASC", conn)
     conn.close()
     return holidays_df
 
 # Function to delete a holiday entry from the database
 def delete_holiday_from_db(holiday_date):
-    conn = sqlite3.connect('NDOTDATA.db')
+    conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute('DELETE FROM holidays WHERE holiday_date = ?', (holiday_date,))
     conn.commit()
@@ -270,7 +272,7 @@ def delete_holiday_from_db(holiday_date):
 
 # Function to delete a user from the database
 def delete_user_from_db(user_id):
-    conn = sqlite3.connect('NDOTDATA.db')
+    conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     
     cursor.execute('DELETE FROM users WHERE id = ?', (user_id,))
@@ -280,7 +282,7 @@ def delete_user_from_db(user_id):
 
 #fetch latest config
 def fetch_latest_config():
-    conn = sqlite3.connect('NDOTDATA.db')
+    conn = sqlite3.connect(DB_PATH)
     query = '''
         SELECT AnchorWgt, NonAnchorWgt, MiscWgt, AnchorMaxPoints, NonAnchorMaxPoints, EpicMinEffortPoints 
         FROM weightageconfig
@@ -292,7 +294,7 @@ def fetch_latest_config():
 
 # Function to insert a new configuration if none exists, or update the existing one
 def add_config_to_db(AnchorWgt,NonAnchorWgt, MiscWgt, AnchorMaxPoints, NonAnchorMaxPoints, EpicMinEffortPoints):
-    conn = sqlite3.connect('NDOTDATA.db')
+    conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
 
     # Calculate NonAnchorWgt as 100 - AnchorWgt
@@ -324,7 +326,7 @@ def add_config_to_db(AnchorWgt,NonAnchorWgt, MiscWgt, AnchorMaxPoints, NonAnchor
 
 # Function to fetch data from the database based on work item type
 def fetch_data_from_db(work_item_type):
-    conn = sqlite3.connect('NDOTDATA.db')
+    conn = sqlite3.connect(DB_PATH)
     query = ""
     
     if work_item_type == "Projects":
@@ -343,7 +345,7 @@ def fetch_data_from_db(work_item_type):
 
 # Function to read tables into DataFrames and perform the joins
 def load_and_join_data():
-    conn = sqlite3.connect('NDOTDATA.db')
+    conn = sqlite3.connect(DB_PATH)
     
     # SQL query to join productbacklogitems, features, epics, and projects
     # SQL query with all fields manually selected and aliased to avoid conflicts
@@ -477,13 +479,13 @@ def display_styled_calendar(month, year, holidays_df):
             
             # Check if the date is a holiday
             if date in holiday_dates:
-                month_calendar = month_calendar.replace(f">{day}<", f' style="background-color: #FFDDC1;">{day}<')  # Orange for holidays
+                month_calendar = month_calendar.replace(f">{day}<", f' style="background-color: #ff9b9b;">{day}<')  # Orange for holidays
 
             # Check if the date is a Saturday or Sunday
             elif date.weekday() == 5:  # Saturday
-                month_calendar = month_calendar.replace(f">{day}<", f' style="background-color: #FFDDC1;">{day}<')  # Orange for Saturday
+                month_calendar = month_calendar.replace(f">{day}<", f' style="background-color: #D3D3D3;">{day}<')  # Orange for Saturday
             elif date.weekday() == 6:  # Sunday
-                month_calendar = month_calendar.replace(f">{day}<", f' style="background-color: #FFDDC1;">{day}<')  # Orange for Sunday
+                month_calendar = month_calendar.replace(f">{day}<", f' style="background-color: #D3D3D3;">{day}<')  # Orange for Sunday
 
         except ValueError:
             pass  # Ignore invalid dates (e.g., February 30)
@@ -536,6 +538,7 @@ def main_application():
     if 'selected_project_details' not in st.session_state:
         st.session_state.selected_project_details = pd.DataFrame()  # Initialize empty dataframe in session state
         
+
 
     # Sidebar styling
     st.sidebar.markdown(
@@ -809,7 +812,7 @@ def main_application():
         
             st.write("Epic status")
             if not st.session_state['selected_project_details'].empty:
-                st.dataframe(st.session_state['selected_project_details'], hide_index=True)
+                st.dataframe(st.session_state['selected_project_details'], hide_index=True) 
             # st.write(anchor_project_df)
             # st.write("non-anchor")
             # st.write(non_anchor_project_df)
@@ -988,23 +991,23 @@ def main_application():
         st.html(htmluserstr)
         tab2,tab1  = st.tabs(["All Resources", "Add Resources (Slingshots only)"])
 
-        # with tab1:
-        #     # Create a form for user creation
-        #     with st.form(key='user_form'):
-        #         name = st.text_input("Name", max_chars=50)
-        #         email = st.text_input("Email", max_chars=100)
-        #         role = st.selectbox("Role", ["Admin", "Viewer", "Editor"])
-        #         #active_status = st.checkbox("Active Status", value=True)
+        with tab1:
+            # Create a form for user creation
+            with st.form(key='user_form'):
+                name = st.text_input("Name", max_chars=50)
+                email = st.text_input("Email", max_chars=100)
+                #role = st.selectbox("Role", ["Admin", "Viewer", "Editor"])
+                #active_status = st.checkbox("Active Status", value=True)
                 
-        #         # Submit button
-        #         submit_button = st.form_submit_button(label="Create User")
+                # Submit button
+                submit_button = st.form_submit_button(label="Add Resource")
                 
-        #         if submit_button:
-        #             add_user_to_db(name, email, role)
+                if submit_button:
+                    add_user_to_db(name, email, "Viewer")
         with tab2:   
         # Display existing users
-            conn = sqlite3.connect('NDOTDATA.db')
-            users = pd.read_sql("SELECT name, email FROM users", conn)
+            conn = sqlite3.connect(DB_PATH)
+            users = pd.read_sql("SELECT name, email FROM users where start_date <= datetime('now')", conn)
             conn.close()    
             
             st.subheader("Existing Resources")
@@ -1236,7 +1239,7 @@ def main_application():
     #             add_user_to_db(name, email, role, active_status)
         
     #     # Display existing users
-    #     conn = sqlite3.connect('NDOTDATA.db')
+    #     conn = sqlite3.connect(DB_PATH)
     #     users = pd.read_sql("SELECT * FROM users", conn)
     #     conn.close()
         
