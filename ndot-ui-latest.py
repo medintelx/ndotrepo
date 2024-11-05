@@ -190,7 +190,7 @@ def add_user_to_db(name, email, role):
             VALUES (?, ?, ?, ?, ?)
         ''', (name, email, role, 1, datetime.now()))
         conn.commit()
-        st.success("User added successfully!")
+        #st.success("User added successfully!")
     except sqlite3.IntegrityError:
         st.error("This email is already registered. Please use a different email.")
     
