@@ -548,7 +548,7 @@ def get_usercount():
     conn = sqlite3.connect(db_path)
     
     # Query to count the number of users in the 'users' table
-    query_users_count = "SELECT COUNT(*) FROM users;"
+    query_users_count = "SELECT COUNT(*) FROM users where start_date <= datetime('now');"
     cursor = conn.cursor()
     cursor.execute(query_users_count)
     
