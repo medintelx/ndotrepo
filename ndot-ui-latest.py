@@ -20,7 +20,7 @@ load_dotenv()
 
 
 #DB_PATH = os.getenv('DB_PATH')
-DB_PATH = 'NDOTDATAL.db'
+DB_PATH = 'NDOTDATAL.DB'
 # st.markdown("""
 #     <style>
 #         .reportview-container {
