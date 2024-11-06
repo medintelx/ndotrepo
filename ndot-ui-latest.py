@@ -11,7 +11,7 @@ import calendar
 from streamlit_modal import Modal
 #from streamlit_timeline import st_timeline
 #from streamlit_timeline import timeline
-from st_aggrid import AgGrid, GridOptionsBuilder, AgGridTheme
+from st_aggrid import AgGrid, GridOptionsBuilder, AgGridTheme, JsCode
 import pandas as pd
 import datautility as du
 from dotenv import load_dotenv
@@ -1026,36 +1026,83 @@ def main_application():
                 usersdf = pd.DataFrame(users)
                 st.dataframe(usersdf,  use_container_width=True,  hide_index=True)
             else:
-                st.write("No users found.")
+                st.write("No resources found.")
             # Display dummyusers table with delete functionality
-        
+            
 
-            # Display the 'dummyusers' DataFrame if it is not empty with delete option
+                    # Check if dummyusers DataFrame is not empty
             if not dummyusers.empty:
-                st.write("**Newly Added users**")
-                
-                # Display table headers
-                col1, col2, col3 = st.columns([2, 3, 1])
-                col1.write("**Name**")
-                col2.write("**Email**")
-                col3.write("**Delete**")
+                st.subheader("Newly Added Resources")
+                # Create GridOptions with checkbox selection mode
+                gb = GridOptionsBuilder.from_dataframe(dummyusers)
+                gb.configure_selection(selection_mode="single", use_checkbox=True)
+                gb.configure_default_column(resizable=True)
+                gb.configure_grid_options(domLayout='autoHeight')  # Sets auto height for the grid
+                for col in dummyusers.columns:
+                    gb.configure_column(col, flex=1) 
+                 # Additional grid options to fit the screen width
+                gb.configure_grid_options(domLayout='autoHeight', suppressHorizontalScroll=True)
+    
+                # Set columns to auto fit to the grid width
+                gb.configure_grid_options(fit_columns_on_grid_load=True)
+                            # Build the grid options
+                grid_options = gb.build()
 
-                # Display each row in the dummyusers DataFrame with a delete button
-                for i, row in dummyusers.iterrows():
-                    col1, col2, col3 = st.columns([2, 3, 1])
-                    col1.write(row["name"])
-                    col2.write(row["email"])
+                # Display the AgGrid with selection mode
+                grid_response = AgGrid(
+                    dummyusers,
+                    gridOptions=grid_options,
+                    update_mode=GridUpdateMode.SELECTION_CHANGED,
+               
+                    fit_columns_on_grid_load=True,
+                    allow_unsafe_jscode=True  # Enable JavaScript if needed
+                )
+
+                # Extract selected rows
+                selected_rows = grid_response['selected_rows']
+
+                # Check if selected_rows is a non-empty DataFrame
+                if selected_rows is not None and  not selected_rows.empty:
+                    # Extract the email value from the selected row
+                    email_to_delete = selected_rows.iloc[0]['email']
                     
-                    # Add a delete button for each user
-                    if col3.button("Delete", key=f"delete_{i}"):
-                        # Delete the user from the database
+                    # Display a delete button for confirmation
+                    if st.button("Delete"):
+                        # Delete the selected user from the database
                         conn = sqlite3.connect(DB_PATH)
-                        conn.execute("DELETE FROM users WHERE email = ?", (row["email"],))
+                        conn.execute("DELETE FROM users WHERE email = ?", (email_to_delete,))
                         conn.commit()
                         conn.close()
+                        st.success(f"Deleted resource with email: {email_to_delete}")
+                        st.rerun()  # Refresh to show updated data
+           
+
+            # # Display the 'dummyusers' DataFrame if it is not empty with delete option
+            # if not dummyusers.empty:
+            #     st.write("**Newly Added Resources**")
+                
+            #     # Display table headers
+            #     col1, col2, col3 = st.columns([2, 3, 1])
+            #     col1.write("**Name**")
+            #     col2.write("**Email**")
+            #     col3.write("**Delete**")
+
+            #     # Display each row in the dummyusers DataFrame with a delete button
+            #     for i, row in dummyusers.iterrows():
+            #         col1, col2, col3 = st.columns([2, 3, 1])
+            #         col1.write(row["name"])
+            #         col2.write(row["email"])
+                    
+            #         # Add a delete button for each user
+            #         if col3.button("Delete", key=f"delete_{i}"):
+            #             # Delete the user from the database
+            #             conn = sqlite3.connect(DB_PATH)
+            #             conn.execute("DELETE FROM users WHERE email = ?", (row["email"],))
+            #             conn.commit()
+            #             conn.close()
                         
-                        st.success(f"Deleted user: {row['name']} ({row['email']})")
-                        st.rerun()  # Refresh the page to reflect change
+            #             st.success(f"Deleted user: {row['name']} ({row['email']})")
+            #             st.rerun()  # Refresh the page to reflect change
                
     elif st.session_state.page == 'Holidays':
         st.markdown(""" <style>
@@ -1122,6 +1169,40 @@ def main_application():
                 st.write(f"### {calendar.month_name[st.session_state.month]} {st.session_state.year}")
                 # Display the styled calendar for the selected month and year
                 display_styled_calendar(st.session_state.month, st.session_state.year, holidays_df)
+                
+                # Create the legend with colored blocks
+                st.markdown("""
+                <style>
+                    .legend-container {
+                        display: flex;
+                        flex-direction: row;
+                        align-items: center;
+                        margin-bottom: 10px;
+                    }
+                    .legend-box {
+                        width: 20px;
+                        height: 20px;
+                        margin-right: 10px;
+                        display: inline-block;
+                        border-radius: 5px;
+                    }
+                    .holiday { background-color: #ff9b9b; } /* Color for holidays */
+                    .weekend { background-color: #D3D3D3; } /* Color for weekends */
+                    .workday { background-color: #FFFFFF; border: 1px solid #DDD; } /* Color for regular workdays */
+                </style>
+                """, unsafe_allow_html=True)
+
+                # Display each legend item with a description
+                st.markdown("""
+                <div class="legend-container">
+                    <div class="legend-box holiday"></div>
+                    <span>Holiday</span>
+                    &nbsp; &nbsp; 
+                    <div class="legend-box weekend"></div>
+                    <span>Weekend</span>
+                </div>
+              
+                """, unsafe_allow_html=True)
 
             with col3:
                 if st.button("Next Month"):
