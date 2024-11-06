@@ -311,9 +311,9 @@ def get_project_data():
 
     # Rename effort column for clarity
     aggregated_df = aggregated_df.rename(columns={'pbis_Microsoft_VSTS_Scheduling_Effort': 'total_effort_from_pbis'})
-
-    #aggregated_df.to_excel('work_items_latest_one.xlsx', index=False)
     
+    #aggregated_df.to_excel('work_items_latest_monday.xlsx', index=False)
+    aggregated_df =  pd.read_excel("testdata.xlsx")
      # Define conditions and corresponding choices for nearest_doc_date
     conditions = [
         aggregated_df['epics_System_Title'].str.contains('QAQC|QA/QC', case=False, na=False),
