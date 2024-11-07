@@ -708,9 +708,9 @@ def main_application():
                     with st.container():
                         with st.popover("Type Weights"):
                         # Input fields will be stacked vertically inside the container
-                            MiscWgt = st.number_input("Miscellaneous Weight", min_value=0, value=MiscWgt_default,step=1, format="%d")
-                            AnchorWgt = st.number_input("Anchor Weight", min_value=0, value=AnchorWgt_default, step=1, format="%d")
-                            NonAnchorWgt = st.number_input("Non-Anchor Weight", min_value=0, value=(100-AnchorWgt), step=1, format="%d", disabled=True)
+                            MiscWgt = st.number_input("Miscellaneous Weight %", min_value=0, value=MiscWgt_default,step=1, format="%d")
+                            AnchorWgt = st.number_input("Anchor Weight %", min_value=0, value=AnchorWgt_default, step=1, format="%d")
+                            NonAnchorWgt = st.number_input("Non-Anchor Weight %", min_value=0, value=(100-AnchorWgt), step=1, format="%d", disabled=True)
                         st.divider()
                         with st.popover("Max Points "):                     
                             AnchorMaxPoints = st.number_input("Anchor Max Effort Points", min_value=0,  value=AnchorMaxPoints_default,  step=1, format="%d")
@@ -1033,6 +1033,10 @@ def main_application():
                     # Check if dummyusers DataFrame is not empty
             if not dummyusers.empty:
                 st.subheader("Newly Added Resources")
+                st.markdown(
+    "<p style='font-size:12px;'>(These are dummy entries, intended only for testing effort point allocations.)</p>",
+    unsafe_allow_html=True
+)
                 # Create GridOptions with checkbox selection mode
                 gb = GridOptionsBuilder.from_dataframe(dummyusers)
                 gb.configure_selection(selection_mode="single", use_checkbox=True)
