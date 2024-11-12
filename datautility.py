@@ -152,7 +152,7 @@ def distribute_epics_to_sprints(anchor_projects_df, non_anchor_projects_df, upco
     # Initialize dictionary to store sprint allocations
     sprint_allocations = {sprint: {'anchor': [], 'non_anchor': [], 'remaining_anchor_effort': 0, 'remaining_non_anchor_effort': 0}
                           for sprint in upcoming_sprints_df['Iteration']}
-    
+    #breakpoint()
     # Initialize remaining capacity for each sprint based on total allowed capacity
     for _, sprint in upcoming_sprints_df.iterrows():
         sprint_name = sprint['Iteration']
@@ -233,6 +233,7 @@ def distribute_epics_to_sprints(anchor_projects_df, non_anchor_projects_df, upco
     #return df_uniform.style.applymap(highlight_overdue, subset=df_uniform.columns)
     return df_uniform,anchor_projects_df,non_anchor_projects_df
   
+
 # Sample usage
 # formatted_df = distribute_epics_to_sprints(anchor_projects_df, non_anchor_projects_df, upcoming_sprints_df)
 # formatted_df  # Display the styled pivot table without the extra index column
@@ -358,79 +359,6 @@ def get_project_data():
 
 
 
-
-# def get_upcoming_sprint():
-#      # Connect to the SQLite database
-#     conn = sqlite3.connect(db_path)
-#     cursor = conn.cursor()
-
-#     # Get today's date in 'YYYY-MM-DD' format
-#     today = datetime.now().strftime('%Y-%m-%d')
-
-#     # Query to get all upcoming sprints (where start date is greater than today's date)
-#     cursor.execute('''
-#         SELECT Iteration, Start_date, End_date 
-#         FROM iterations 
-#         WHERE Start_date > ? 
-#         ORDER BY Start_date ASC
-#     ''', (today,))
-
-#     # Fetch all results
-#     upcoming_sprints = cursor.fetchall()
-
-#     # Convert the fetched results into a pandas DataFrame
-#     df = pd.DataFrame(upcoming_sprints, columns=['Iteration', 'Start_date', 'End_date'])
-
-#     # Add a column for holidays count
-#     df['Holidays_Count'] =  0
-
-#      # Add a column for holidays count
-#     Effort_points_per_user =  10
-
-#     resource_count = get_usercount()
-
-
-#     # For each sprint, calculate the number of holidays that fall within the start and end dates
-#     for i, row in df.iterrows():
-#         sprint_start = datetime.strptime(row['Start_date'], '%Y-%m-%d')
-#         sprint_end = datetime.strptime(row['End_date'], '%Y-%m-%d')
-#         cursor.execute('''
-#             SELECT COUNT(*)
-#             FROM holidays
-#             WHERE Holiday_date BETWEEN ? AND ?
-#         ''', (row['Start_date'], row['End_date']))
-        
-#         # Fetch the count of holidays and assign to the new column in the DataFrame
-#         holidays_count = cursor.fetchone()[0]
-#         df.at[i, 'Holidays_Count'] = holidays_count
-
-#         df['resource_count']  = get_usercount()
-#         cursor.execute('''
-#             SELECT leave_from, leave_to
-#             FROM leaves
-#             WHERE leave_from <= ? AND leave_to >= ?
-#         ''', (row['End_date'], row['Start_date']))
-
-#         total_leave_days = 0
-#         leave_periods = cursor.fetchall()
-
-#         # Loop through each leave period and calculate the overlap with the sprint, excluding weekends
-#         for leave_from, leave_to in leave_periods:
-#             leave_from_date = datetime.strptime(leave_from, '%Y-%m-%d')
-#             leave_to_date = datetime.strptime(leave_to, '%Y-%m-%d')
-
-#             # Calculate the overlapping days between the leave period and the sprint period, excluding weekends
-#             overlap_days = calculate_days_overlap_exclude_weekends(leave_from_date, leave_to_date, sprint_start, sprint_end)
-#             total_leave_days += overlap_days
-
-#         df.at[i, 'Leave_Days'] = total_leave_days
-
-#     # Close the connection
-#     conn.close()
-#     df['Total_Effort_points'] = (resource_count* Effort_points_per_user)- (resource_count*df['Holidays_Count']) - df['Leave_Days']
-#     print(df)
-#     return df
-
 def get_upcoming_sprints_with_effortpoints_and_weightage():
     # Connect to SQLite database
     conn = sqlite3.connect(db_path)
@@ -456,7 +384,7 @@ def get_upcoming_sprints_with_effortpoints_and_weightage():
     # Add columns for holidays count, leave count, effort points per user, resource count, total effort points, and weightage points
     df['Holidays_Count'] = 0
     df['Effort_points_per_user'] = 10  # Each user gets 10 effort points per sprint
-    df['resource_count'] = get_usercount()  # Assuming get_usercount() returns the number of users
+    df['resource_count'] = 0  # Initialize resource count to be calculated per sprint
     df['Leave_Days'] = 0  # Initialize Leave_Days
     df['TotalEffortpoints'] = 0  # Initialize TotalEffortpoints
     df['MiscEffortPoints'] = 0  # Initialize Misc Effort Points
@@ -464,7 +392,6 @@ def get_upcoming_sprints_with_effortpoints_and_weightage():
     df['NonAnchorEffortPoints'] = 0  # Initialize Non-Anchor Effort Points
 
     # Fetch weightage configuration for MiscWgt, AnchorWgt, and NonAnchorWgt
-    # Fetch all columns from weightageconfig table
     cursor.execute('SELECT * FROM weightageconfig LIMIT 1')
     weightageconfig = cursor.fetchone() 
     if weightageconfig:
@@ -474,24 +401,27 @@ def get_upcoming_sprints_with_effortpoints_and_weightage():
         anchorMaxPoints = weightageconfig[4]
         nonAnchorMaxPoints = weightageconfig[5]
         epicMinEffortPoints = weightageconfig[6]
-    
 
-    # For each sprint, calculate the number of holidays and leaves that fall within the start and end dates
+    # For each sprint, calculate the number of holidays, leaves, and resource count
     for i, row in df.iterrows():
         sprint_start = datetime.strptime(row['Start_date'], '%Y-%m-%d')
         sprint_end = datetime.strptime(row['End_date'], '%Y-%m-%d')
 
-        # Count holidays between sprint start and end date
+        # Get resource count for the specific sprint start date
+        resource_count = get_usercount(row['Start_date'])
+        df.at[i, 'resource_count'] = resource_count
+
+        # Fetch holidays within the sprint start and end dates
         cursor.execute('''
-            SELECT COUNT(*)
+            SELECT Holiday_date
             FROM holidays
             WHERE Holiday_date BETWEEN ? AND ?
         ''', (row['Start_date'], row['End_date']))
         
-        holidays_count = cursor.fetchone()[0]
-        df.at[i, 'Holidays_Count'] = holidays_count
+        holiday_dates = [datetime.strptime(h[0], '%Y-%m-%d') for h in cursor.fetchall()]
+        df.at[i, 'Holidays_Count'] = len(holiday_dates)
 
-        # Calculate total leave days that overlap with the sprint, excluding weekends
+        # Calculate total leave days that overlap with the sprint, excluding weekends and holidays
         cursor.execute('''
             SELECT leave_from, leave_to
             FROM leaves
@@ -501,19 +431,18 @@ def get_upcoming_sprints_with_effortpoints_and_weightage():
         total_leave_days = 0
         leave_periods = cursor.fetchall()
 
-        # Loop through each leave period and calculate the overlap with the sprint, excluding weekends
+        # Loop through each leave period and calculate the overlap with the sprint, excluding weekends and holidays
         for leave_from, leave_to in leave_periods:
             leave_from_date = datetime.strptime(leave_from, '%Y-%m-%d')
             leave_to_date = datetime.strptime(leave_to, '%Y-%m-%d')
 
-            # Calculate the overlapping days between the leave period and the sprint period, excluding weekends
-            overlap_days = calculate_days_overlap_exclude_weekends(leave_from_date, leave_to_date, sprint_start, sprint_end)
+            # Calculate the overlapping days between the leave period and the sprint period, excluding weekends and holidays
+            overlap_days = calculate_days_overlap_exclude_weekends_and_holidays(leave_from_date, leave_to_date, sprint_start, sprint_end, holiday_dates)
             total_leave_days += overlap_days
 
         df.at[i, 'Leave_Days'] = total_leave_days
 
         # Calculate TotalEffortpoints based on the formula
-        resource_count = df.at[i, 'resource_count']
         effort_points_per_user = df.at[i, 'Effort_points_per_user']
         holidays_count = df.at[i, 'Holidays_Count']
         leave_days = df.at[i, 'Leave_Days']
@@ -539,24 +468,41 @@ def get_upcoming_sprints_with_effortpoints_and_weightage():
         df.at[i, 'minimumEpicPoints'] = epicMinEffortPoints
 
     # Close the connection
+    print(df.to_excel("sample.xlsx"))
     conn.close()
-
+    
     return df
-
-def get_usercount():
+def get_usercount(start_date):
     # Connect to the SQLite database
     conn = sqlite3.connect(db_path)
     
-    # Query to count the number of users in the 'users' table
-    query_users_count = "SELECT COUNT(*) FROM users where start_date <= datetime('now');"
+    # Query to count the number of users in the 'users' table whose start date matches the sprint start date
+    query_users_count = "SELECT COUNT(*) FROM users WHERE start_date <= ?"
     cursor = conn.cursor()
-    cursor.execute(query_users_count)
+    cursor.execute(query_users_count, (start_date,))
     
     # Fetch the number of users
     number_of_users = cursor.fetchone()[0]
+    
     # Close the database connection
     conn.close()
+    
     return number_of_users
+
+def calculate_days_overlap_exclude_weekends_and_holidays(start_date, end_date, sprint_start, sprint_end, holiday_dates):
+    overlap_start = max(start_date, sprint_start)
+    overlap_end = min(end_date, sprint_end)
+
+    # Calculate total days between overlap period, excluding weekends and holidays
+    total_days = 0
+    current_day = overlap_start
+    while current_day <= overlap_end:
+        # Exclude weekends (Saturday and Sunday) and holidays
+        if current_day.weekday() < 5 and current_day not in holiday_dates:
+            total_days += 1
+        current_day += timedelta(days=1)
+
+    return total_days
  
 
  # Function to fetch the latest weightage configuration from the database
