@@ -888,11 +888,11 @@ def main_application():
         if not leaves_df.empty:
             # Display the column headers using st.columns
             header1, header2, header3, header5= st.columns([1, 1,1,1])
-            header1.write("*Name*")
-            header2.write("*Leave From*")
-            header3.write("*Leave To*")
+            header1.write("**Name**")
+            header2.write("**Leave From**")
+            header3.write("**Leave To**")
             #header4.write("*Edit Actions*")
-            header5.write("*Delete Actions*")
+            header5.write("**Delete Actions**")
 
             for i, row in leaves_df.iterrows():
                 col1, col2, col3, col5 = st.columns([1, 1, 1, 1])
@@ -1246,9 +1246,9 @@ def main_application():
             if not holidays_df.empty:
                 # Display column headers
                 col1, col2, col3 = st.columns([2, 2, 1])
-                col1.write("*Holiday Name*")
-                col2.write("*Holiday Date*")
-                col3.write("*Actions*")
+                col1.write("**Holiday Name**")
+                col2.write("**Holiday Date**")
+                col3.write("**Actions**")
 
                 # Display each row with a delete button
                 for i, row in holidays_df.iterrows():
