@@ -820,11 +820,11 @@ def main_application():
             # st.write("Sprint Allocation")
             # st.write(allocation)
             st.write("Upcoming Sprint Data")
-            st.write(upcoming_sprint_data) 
+            st.dataframe(upcoming_sprint_data, hide_index=True) 
             st.write("Anchor")
-            st.write(anchor_project_df)
+            st.dataframe(anchor_project_df, hide_index=True))
             st.write("Non Anchor")
-            st.write(non_anchor_project_df)
+            st.dataframe(non_anchor_project_df, hide_index=True))
         #data = fetch_data_from_db("Epics")     
     #     data = {
     #     "epic": ["Epic-001"],
