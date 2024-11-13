@@ -822,9 +822,9 @@ def main_application():
             st.write("Upcoming Sprint Data")
             st.dataframe(upcoming_sprint_data, hide_index=True) 
             st.write("Anchor")
-            st.dataframe(anchor_project_df, hide_index=True))
+            st.dataframe(anchor_project_df, hide_index=True)
             st.write("Non Anchor")
-            st.dataframe(non_anchor_project_df, hide_index=True))
+            st.dataframe(non_anchor_project_df, hide_index=True)
         #data = fetch_data_from_db("Epics")     
     #     data = {
     #     "epic": ["Epic-001"],
