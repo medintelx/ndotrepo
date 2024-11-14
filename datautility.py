@@ -312,10 +312,10 @@ def distribute_epics_to_sprints(anchor_projects_df, non_anchor_projects_df, upco
                 
     # Create DataFrame and pivot it so that each sprint is a column with combined efforts in each cell
     allocations_df = pd.DataFrame(allocation_results)
-    pivot_df = allocations_df.pivot(columns='Sprint', values='Effort').reset_index(drop=True)
-   
+    # Ensure the pivot table columns follow the order of sorted Start_date
+    sprint_order = upcoming_sprints_df['Iteration'].tolist()
+    pivot_df = allocations_df.pivot(columns='Sprint', values='Effort').reindex(columns=sprint_order).reset_index(drop=True)
     df_uniform = pivot_df.apply(lambda x: pd.Series(x.dropna().values), axis=0)
-    
     # Apply formatting for overdue items in red
     def highlight_overdue(val):
         if isinstance(val, str) and 'overdue' in val:
