@@ -132,6 +132,11 @@ def login_screen():
     div.st-ah {
                 width: 30%;
     }
+    .custom-error {
+        color: red;  /* Use a visible color like orange */
+        font-size: 16px;
+        font-weight: bold;
+    }
     </style>
     """, unsafe_allow_html=True)
     # Input field for the username
@@ -143,7 +148,8 @@ def login_screen():
             st.session_state['logged_in'] = True  # Set session state to indicate user is logged in
             st.rerun()  # Force the app to rerun immediately to reflect the state change
         else:
-            st.error("Invalid username. Please try again.")
+            # st.error("Invalid username. Please try again.")
+            st.markdown("<p class='custom-error'>Invalid username. Please try again.</p>", unsafe_allow_html=True)
 
 
 # Function to initialize the user table in the database
@@ -632,8 +638,10 @@ def main_application():
         st.session_state.page = 'Holidays'
     if st.sidebar.button('⚙️ Settings', key='settings'):
         st.session_state.page = 'Settings'
-    # if st.sidebar.button("🔓 Logout", key='logout'):
-    #     st.session_state.page = 'Logout'
+        # Logout button
+    if st.sidebar.button("🔓 Logout", key='logout'):
+        st.session_state['logged_in'] = False  # Log out the user
+        st.rerun() 
         
 
     # Based on the selected page, display the corresponding content
@@ -812,8 +820,14 @@ def main_application():
         
             st.write("Epic status")
             if not st.session_state['selected_project_details'].empty:
+                print(st.session_state['selected_project_details'])
+                # Convert 'nearest_due_date' column to datetime and format as MM/DD/YYYY
+                st.session_state['selected_project_details']['Nearest Due Date'] = pd.to_datetime(st.session_state['selected_project_details']['Nearest Due Date'], errors='coerce')
+                st.session_state['selected_project_details']['Nearest Due Date'] = st.session_state['selected_project_details']['Nearest Due Date'].dt.strftime('%m/%d/%Y')
+
+      
                 st.session_state['selected_project_details']['Project ID'] = st.session_state['selected_project_details']['Project ID'].astype(int)
-                st.dataframe(st.session_state['selected_project_details'].style.format({"Project ID": "{:.0f}"}), hide_index=True) 
+                st.dataframe(st.session_state['selected_project_details'].style.format({"Project ID": "{:.0f}", 'Total Effort Points': "{}"}), hide_index=True) 
             # st.write(anchor_project_df)
             # st.write("non-anchor")
             # st.write(non_anchor_project_df)
@@ -821,11 +835,41 @@ def main_application():
             # st.write("Sprint Allocation")
             # st.write(allocation)
             st.write("Upcoming Sprint Data")
+
+            # Convert 'Start_date' and 'End_date' to US date format
+            upcoming_sprint_data['Start_date'] = pd.to_datetime(upcoming_sprint_data['Start_date'], errors='coerce').dt.strftime('%m/%d/%Y')
+            upcoming_sprint_data['End_date'] = pd.to_datetime(upcoming_sprint_data['End_date'], errors='coerce').dt.strftime('%m/%d/%Y')
+
             st.dataframe(upcoming_sprint_data, hide_index=True) 
             st.write("Anchor")
-            st.dataframe(anchor_project_df, hide_index=True)
+            anchor_projects_df['projects_Fiscal_Year'] = pd.to_numeric(anchor_projects_df['projects_Fiscal_Year'], errors='coerce').fillna(0).astype(int)
+            anchor_projects_df['projects_Priority_Traffic_Ops'] = pd.to_numeric(anchor_projects_df['projects_Priority_Traffic_Ops'], errors='coerce').fillna(0).astype(int)
+            anchor_projects_df['projects_Construction_EA_Number'] = pd.to_numeric(anchor_projects_df['projects_Construction_EA_Number'], errors='coerce').fillna(0).astype(int)
+
+            # Update the formatting dictionary with your actual column names
+            format_dict = {
+                'projects_Work_Item_ID': '{}',      # Display without commas for project work item ID
+                'epics_System_Id': '{}', 
+                'total_effort_from_pbis': '{}',              # Display without commas for epic system ID
+                'nearest_doc_date': lambda x: pd.to_datetime(x).strftime('%m/%d/%Y') if pd.notnull(x) else '',
+                'projects_Scoping_30_Percent': lambda x: pd.to_datetime(x).strftime('%m/%d/%Y') if pd.notnull(x) else '',
+                'projects_SeventyFivePercentComplete': lambda x: pd.to_datetime(x).strftime('%m/%d/%Y') if pd.notnull(x) else '',
+                'projects_Intermediate_Date': lambda x: pd.to_datetime(x).strftime('%m/%d/%Y') if pd.notnull(x) else '',
+                'projects_QAQC_Submittal_Date': lambda x: pd.to_datetime(x).strftime('%m/%d/%Y') if pd.notnull(x) else '',
+                'projects_Document_Submittal_Date': lambda x: pd.to_datetime(x).strftime('%m/%d/%Y') if pd.notnull(x) else '',
+                'projects_Official_DOC_Date': lambda x: pd.to_datetime(x).strftime('%m/%d/%Y') if pd.notnull(x) else ''
+
+
+            }
+           
+            # Apply styling to format columns
+            styled_anchor_df = anchor_projects_df.style.format(format_dict)
+
+            st.dataframe(styled_anchor_df, hide_index=True)
             st.write("Non Anchor")
-            st.dataframe(non_anchor_project_df, hide_index=True)
+             # Apply styling to format columns
+            styled_non_anchor_df = non_anchor_project_df.style.format(format_dict)
+            st.dataframe(styled_non_anchor_df, hide_index=True)
         #data = fetch_data_from_db("Epics")     
     #     data = {
     #     "epic": ["Epic-001"],
@@ -893,7 +937,7 @@ def main_application():
             header2.write("**Leave From**")
             header3.write("**Leave To**")
             #header4.write("*Edit Actions*")
-            header5.write("**Delete Actions**")
+            header5.write("**Action**")
 
             for i, row in leaves_df.iterrows():
                 col1, col2, col3, col5 = st.columns([1, 1, 1, 1])
@@ -1039,6 +1083,9 @@ def main_application():
     unsafe_allow_html=True
 )
                 # Create GridOptions with checkbox selection mode
+
+                row_height = 35  # Approximate row height in pixels
+                grid_height = min(400, (len(dummyusers) * row_height) + 35) 
                 gb = GridOptionsBuilder.from_dataframe(dummyusers)
                 gb.configure_selection(selection_mode="single", use_checkbox=True)
                 gb.configure_default_column(resizable=True)
@@ -1060,7 +1107,11 @@ def main_application():
                     update_mode=GridUpdateMode.SELECTION_CHANGED,
                
                     fit_columns_on_grid_load=True,
-                    allow_unsafe_jscode=True  # Enable JavaScript if needed
+                    allow_unsafe_jscode=True ,
+                    enable_enterprise_modules=False,
+                    theme = AgGridTheme.STREAMLIT,
+                    height = grid_height
+                     
                 )
 
                 # Extract selected rows
@@ -1249,7 +1300,7 @@ def main_application():
                 col1, col2, col3 = st.columns([2, 2, 1])
                 col1.write("**Holiday Name**")
                 col2.write("**Holiday Date**")
-                col3.write("**Actions**")
+                col3.write("**Action**")
 
                 # Display each row with a delete button
                 for i, row in holidays_df.iterrows():
@@ -1330,218 +1381,7 @@ def main_application():
                 # Update session state with new config to reflect changes without leaving the page
                 st.session_state.config_data = fetch_latest_config()
                 st.rerun()
-    #menu = st.sidebar.selectbox("Menu", ["Work Items", "Users", "Config", "Leaves", "Holidays", "Forecast"])
-
-    # if st.session_state.page == 'Leaves':
-    #     st.title("Azure DevOps Work Items")
-        
-    #     # Sidebar dropdown to select work item type
-    #     work_item_type = st.sidebar.selectbox(
-    #         "Select Work Item Type", 
-    #         ["Projects", "Epics", "Features", "Product Backlog Items"]
-    #     )
-
-    #     # Fetch and display the corresponding data
-    #     if work_item_type:
-    #         data = fetch_data_from_db(work_item_type)
-    #         st.write(f"Displaying {work_item_type} data:")
-    #         st.dataframe(data)
-
-    # if st.session_state.page == "Leaves":
-    #     st.title("User Registration")
-        
-    #     # Create a form for user creation
-    #     with st.form(key='user_form'):
-    #         name = st.text_input("Name", max_chars=50)
-    #         email = st.text_input("Email", max_chars=100)
-    #         role = st.selectbox("Role", ["Admin", "Viewer", "Editor"])
-    #         active_status = st.checkbox("Active Status", value=True)
-            
-    #         # Submit button
-    #         submit_button = st.form_submit_button(label="Create User")
-            
-    #         if submit_button:
-    #             add_user_to_db(name, email, role, active_status)
-        
-    #     # Display existing users
-    #     conn = sqlite3.connect(DB_PATH)
-    #     users = pd.read_sql("SELECT * FROM users", conn)
-    #     conn.close()
-        
-    #     st.subheader("Existing Users")
-        
-    #     if not users.empty:
-    #         for index, row in users.iterrows():
-    #             col1, col2, col3, col4, col5 = st.columns([2, 3, 3, 2, 1])
-                
-    #             # Display the user information
-    #             col1.write(row["id"])
-    #             col2.write(row["name"])
-    #             col3.write(row["email"])
-    #             col4.write(row["role"])
-                
-    #             delete_button = col5.button("Del", key=row["id"])
-    #             if delete_button:
-    #                 delete_user_from_db(row["id"])
-    #                 st.experimental_rerun()  # Refresh the app after deletion
-
-    #     else:
-    #         st.write("No users found.")
-    # elif menu == "Config":
-    #     st.title("Weightage Configurations")
-
-    #     # Create a form for entering weightage configuration
-    #     with st.form(key='config_form'):
-    #         AnchorWgt = st.number_input("Anchor Weight", min_value=0.0, format="%.2f")
-    #         NonAnchorWgt = st.number_input("Non-Anchor Weight", min_value=0.0, format="%.2f")
-    #         MiscWgt = st.number_input("Miscellaneous Weight", min_value=0.0, format="%.2f")
-    #         AnchorMaxPoints = st.number_input("Anchor Max Points", min_value=0)
-    #         NonAnchorMaxPoints = st.number_input("Non-Anchor Max Points", min_value=0)
-    #         EpicMinEffortPoints = st.number_input("Epic Min Effort Points", min_value=0)
-            
-    #         # Submit button
-    #         submit_button = st.form_submit_button(label="Save Configuration")
-            
-    #         if submit_button:
-    #             add_config_to_db(AnchorWgt, NonAnchorWgt, MiscWgt, AnchorMaxPoints, NonAnchorMaxPoints, EpicMinEffortPoints)
-    # elif menu == "Leaves":
-    #     st.title("Leave Management")
-
-    #     # Create tabs for the Leaves menu
-    #     tab1, tab2 = st.tabs(["Add Leave", "Total Leaves"])
-
-    #     # Tab 1: Add Leave
-    #     with tab1:
-    #         st.write("### Add Leave")
-
-    #         # Fetch all users from the database
-    #         users_df = fetch_users_from_db()
-
-    #         if not users_df.empty:
-    #             # Form for adding a leave
-    #             with st.form(key='leave_form'):
-    #                 user = st.selectbox("Select User", users_df['name'])
-    #                 leave_from = st.date_input("Leave From")
-    #                 leave_to = st.date_input("Leave To")
-
-    #                 submit_button = st.form_submit_button(label="Submit Leave")
-
-    #                 if submit_button:
-    #                     # Get the selected user's ID
-    #                     user_id = users_df[users_df['name'] == user]['id'].values[0]
-                    
-    #                     # Add the leave to the database
-    #                     add_leave_to_db(user_id, leave_from, leave_to)
-    #                     st.rerun()
-
-    #         else:
-    #             st.write("No users available.")
-
-    #     # Tab 2: Total Leaves
-    #     with tab2:
-    #         st.write("### Total Leaves")
-
-    #         # Fetch and display all leave records
-    #         leaves_df = fetch_leaves_from_db()
-
-    #         if not leaves_df.empty:
-    #             st.dataframe(leaves_df)
-    #         else:
-    #             st.write("No leave records found.")
-    # elif menu == "Holidays":
-    #     st.title("Holiday Management")
-
-    #     # Fetch all holidays from the database
-    #     holidays_df = fetch_holidays_from_db()
-
-    #     # Adding previous and next buttons to navigate between months
-    #     if "month" not in st.session_state:
-    #         st.session_state.month = current_month
-    #     if "year" not in st.session_state:
-    #         st.session_state.year = current_year
-
-    #     # Create tabs for the Holidays menu
-    #     tab1, tab2, tab3 = st.tabs(["Calendar", "Add/Modify Holiday", "Holiday List"])
-
-    #     # Tab 1: Calendar
-    #     with tab1:
-    #         st.write("### Holiday Calendar")
-    #         # Display navigation buttons for the calendar
-    #         col1, col2, col3 = st.columns([1, 2, 1])
-
-    #         with col1:
-    #             if st.button("Previous Month"):
-    #                 if st.session_state.month == 1:
-    #                     st.session_state.month = 12
-    #                     st.session_state.year -= 1
-    #                 else:
-    #                     st.session_state.month -= 1
-
-    #         with col2:
-    #             st.write(f"### {calendar.month_name[st.session_state.month]} {st.session_state.year}")
-
-    #         with col3:
-    #             if st.button("Next Month"):
-    #                 if st.session_state.month == 12:
-    #                     st.session_state.month = 1
-    #                     st.session_state.year += 1
-    #                 else:
-    #                     st.session_state.month += 1
-
-    #         # Display the styled calendar for the selected month and year
-    #         display_styled_calendar(st.session_state.month, st.session_state.year, holidays_df)
-
-    #     # Tab 2: Add/Modify Holiday
-    #     with tab2:
-    #         st.write("### Add or Modify Holidays")
-    #         # Form for adding/updating holidays
-    #         with st.form(key='holiday_form'):
-    #             holiday_name = st.text_input("Holiday Name", max_chars=100)
-    #             holiday_date = st.date_input("Holiday Date")
-
-    #             submit_button = st.form_submit_button(label="Add/Update Holiday")
-
-    #             if submit_button:
-    #                 add_or_update_holiday(holiday_name, holiday_date)
-    #                 st.experimental_rerun()
-
-    #     # Tab 3: Holiday List
-    #     with tab3:
-    #         st.write("### List of All Holidays")
-    #         # Fetch and display all holidays
-    #         if not holidays_df.empty:
-    #             st.dataframe(holidays_df)
-    #         else:
-    #             st.write("No holidays found.")
-    # elif menu == "Forecast":
-    #     st.title("Forecast")
-        
-    #     # Load and join data
-    #     joined_df = load_and_join_data()
-        
-    #     # Fill missing values in the complexity-related columns with 0
-    #     complexity_columns = [
-    #         'project_Complexity_Signals', 'project_Complexity_Lighting',
-    #         'project_Complexity_ITS', 'project_Complexity_Power_Design',
-    #         'project_Complexity_RoW_Coordination', 'project_Complexity_SLI_Project_Lead',
-    #         'project_Complexity_Solar_Design', 'project_Complexity_Trunkline'
-    #     ]
-        
-    #     # Ensure that missing values (None) are replaced with 0
-    #     joined_df[complexity_columns] = joined_df[complexity_columns].fillna(0)
-
-    #     # Create the new 'project_Complexity' column as the sum of all the complexity columns
-    #     joined_df['project_Complexity'] = joined_df[complexity_columns].sum(axis=1)
-        
-
-    #     # Filter the DataFrame based on the project status
-    #     filtered_df = joined_df[joined_df['project_State'].isin(['Actively Working', 'Approved', 'On-Hold'])]
-
-    #     # Display the updated DataFrame with the new column
-    #     st.write("Product Backlog Items joined with Features, Epics, and Projects:"n
-    #     st.dataframe(filtered_df)
-
-
+   
 # Check if the user is logged in
 if 'logged_in' not in st.session_state:
     st.session_state['logged_in'] = False
