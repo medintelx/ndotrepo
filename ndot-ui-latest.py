@@ -133,7 +133,7 @@ def login_screen():
                 width: 30%;
     }
     .custom-error {
-        color: red;  /* Use a visible color like orange */
+        color: #FF4C4C;  /* Use a visible color like orange */
         font-size: 16px;
         font-weight: bold;
     }
@@ -795,12 +795,13 @@ def main_application():
                                         (relevant_df['projects_Work_Item_ID'] == project_id) &
                                         (relevant_df['epics_System_Title'] == epic_title)
                                     ]
-
+                                    print(project_info)
                                     # Append project details to the list if found
                                     if not project_info.empty:
                                         project_details.append({
                                             "Project ID": project_info['projects_Work_Item_ID'].values[0],
                                             "Project Title": project_info['projects_Title'].values[0],
+                                            "Epic ID": project_info['epics_System_Id'].values[0],
                                             "Epic Title": project_info['epics_System_Title'].values[0],
                                             "Total Effort Points": project_info['total_effort_from_pbis'].values[0],
                                             "Nearest Due Date": project_info['nearest_doc_date'].values[0],
