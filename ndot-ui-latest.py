@@ -943,8 +943,13 @@ def main_application():
             for i, row in leaves_df.iterrows():
                 col1, col2, col3, col5 = st.columns([1, 1, 1, 1])
                 col1.write(row["name"])
-                col2.write(row["leave_from"])
-                col3.write(row["leave_to"])
+                # Convert 'leave_from' and 'leave_to' to US date format
+                leave_from_us = pd.to_datetime(row["leave_from"]).strftime('%m/%d/%Y')
+                leave_to_us = pd.to_datetime(row["leave_to"]).strftime('%m/%d/%Y')
+
+                # Write the formatted dates
+                col2.write(leave_from_us)
+                col3.write(leave_to_us)
 
 
                 # Add Edit button
@@ -1307,7 +1312,8 @@ def main_application():
                 for i, row in holidays_df.iterrows():
                     col1, col2, col3 = st.columns([2, 2, 1])
                     col1.write(row["holiday_name"])
-                    col2.write(row["holiday_date"])
+                    us_formatted_date = pd.to_datetime(row["holiday_date"]).strftime('%m/%d/%Y')
+                    col2.write(us_formatted_date)
 
                     # Add delete button for each holiday
                     delete_button = col3.button("Delete", key=f"delete_{row['holiday_date']}")
