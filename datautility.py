@@ -7,7 +7,7 @@ import os
 # load_dotenv()
 
 # DB_PATH = os.getenv('DB_PATH')
-db_path='NDOTDATAL.db'
+db_path='NDOTDATA.db'
 def calculate_days_overlap_exclude_weekends(start1, end1, start2, end2):
     """Calculate the number of overlapping weekdays (excluding Saturdays and Sundays) between two date ranges."""
     start_date = max(start1, start2)
@@ -27,16 +27,22 @@ def calculate_days_overlap_exclude_weekends(start1, end1, start2, end2):
 
 
 def sort_projects_dataframe(df):
-    # Define the order for the 'projects_State' column (Actively working and Approved will be higher priority)
-    state_priority = pd.CategoricalDtype(categories=["Actively working", "Approved", "On Hold"], ordered=True)
+ 
+    # Convert columns to lowercase for case-insensitive sorting
+    df['projects_State'] = df['projects_State'].str.lower()
+    df['projects_Funding_Source'] = df['projects_Funding_Source'].str.lower()
+    df['projects_Route_Type'] = df['projects_Route_Type'].str.lower()
+
+    # Define the order for the 'projects_State' column
+    state_priority = pd.CategoricalDtype(categories=["actively working", "approved", "on-hold"], ordered=True)
     df['projects_State'] = df['projects_State'].astype(state_priority)
 
     # Define the order for the 'projects_Funding_Source' column
-    funding_source_priority = pd.CategoricalDtype(categories=["Federal", "Other", "State"], ordered=True)
+    funding_source_priority = pd.CategoricalDtype(categories=["federal", "other", "state"], ordered=True)
     df['projects_Funding_Source'] = df['projects_Funding_Source'].astype(funding_source_priority)
 
     # Define the order for the 'projects_Route_Type' column
-    route_type_priority = pd.CategoricalDtype(categories=["Interstate", "Highway", "State route", "Arterial / local", "Other"], ordered=True)
+    route_type_priority = pd.CategoricalDtype(categories=["interstate", "highway", "state route", "arterial / local", "other"], ordered=True)
     df['projects_Route_Type'] = df['projects_Route_Type'].astype(route_type_priority)
 
     # Ensure the specified columns are numeric (in case there are any non-numeric values)
@@ -402,11 +408,12 @@ def get_project_data():
     aggregated_df =  pd.read_excel("testdata.xlsx")
      # Define conditions and corresponding choices for nearest_doc_date
     conditions = [
-        aggregated_df['epics_System_Title'].str.contains('QAQC|QA/QC', case=False, na=False),
+        aggregated_df['epics_System_Title'].str.contains('QAQC|QA/QC|PS&E', case=False, na=False),
         aggregated_df['epics_System_Title'].str.contains('30%|Preliminary', case=False, na=False),
         aggregated_df['epics_System_Title'].str.contains('Intermediate', case=False, na=False),
         aggregated_df['epics_System_Title'].str.contains('75%', case=False, na=False),
-        aggregated_df['epics_System_Title'].str.contains('Doc Design', case=False, na=False)
+        aggregated_df['epics_System_Title'].str.contains('Doc Design', case=False, na=False)  &
+        ~aggregated_df['epics_System_Title'].str.contains('post', case=False, na=False)
     ]
     choices = [
         aggregated_df['projects_QAQC_Submittal_Date'],
