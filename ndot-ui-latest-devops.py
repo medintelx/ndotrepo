@@ -899,7 +899,12 @@ def main_application():
             # Replace values based on presence (non-NaN -> "Yes", NaN -> "No")
             filtered_data[columns_to_check] = filtered_data[columns_to_check].notna().replace({True: "Yes", False: "No"})
 
-            st.dataframe(filtered_data, hide_index=True)
+            format_project_display_dict = {
+                'Work_Item_ID': '{}'
+            }
+               # Apply styling to format columns
+            styled_filtered_data_df = filtered_data.style.format(format_project_display_dict)
+            st.dataframe(styled_filtered_data_df, hide_index=True)
 
     elif st.session_state.page == 'Dashboard':
         st.title("Dashboard")
