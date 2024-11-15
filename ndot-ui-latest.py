@@ -9,8 +9,6 @@ import pandas as pd
 from st_material_table import st_material_table
 import calendar
 from streamlit_modal import Modal
-#from streamlit_timeline import st_timeline
-#from streamlit_timeline import timeline
 from st_aggrid import AgGrid, GridOptionsBuilder, AgGridTheme, JsCode
 import pandas as pd
 import datautility as du
@@ -348,6 +346,32 @@ def fetch_data_from_db(work_item_type):
     conn.close()
     return df
 
+def update_leave_in_db(leave_id, leave_from, leave_to):
+    """
+    Updates an existing leave record in the database.
+
+    Parameters:
+    - leave_id (int): The ID of the leave record to update.
+    - leave_from (date): The new start date for the leave.
+    - leave_to (date): The new end date for the leave.
+    """
+    conn = sqlite3.connect(DB_PATH)  # Use your database path
+    cursor = conn.cursor()
+    
+    try:
+        # Update the leave record with the provided dates
+        cursor.execute('''
+            UPDATE leaves
+            SET leave_from = ?, leave_to = ?
+            WHERE id = ?
+        ''', (leave_from, leave_to, leave_id))
+        
+        conn.commit()
+        st.success(f"Leave ID {leave_id} has been successfully updated.")
+    except sqlite3.Error as e:
+        st.error(f"An error occurred while updating the leave: {e}")
+    finally:
+        conn.close()
 
 # Function to read tables into DataFrames and perform the joins
 def load_and_join_data():
@@ -499,34 +523,6 @@ def display_styled_calendar(month, year, holidays_df):
     # Display the styled calendar using Streamlit's Markdown component
     st.markdown(month_calendar, unsafe_allow_html=True)
 
-
-# # Function to display a styled calendar for a specific month and year
-# def display_styled_calendar(month, year, holidays_df):
-#     cal = calendar.HTMLCalendar()
-
-#     # Convert the holiday dates to list of datetime.date
-#     holiday_dates = pd.to_datetime(holidays_df['holiday_date']).dt.date.tolist()
-
-#     # Generate the calendar HTML for the specified month and year
-#     month_calendar = cal.formatmonth(year, month)
-
-#     # Highlight holidays by modifying the HTML of the calendar
-#     for holiday in holiday_dates:
-#         if holiday.year == year and holiday.month == month:
-#             # Highlight the holiday date
-#             month_calendar = month_calendar.replace(f">{holiday.day}<", f' style="background-color: #FFDDC1;">{holiday.day}<')  # Orange for holidays
-
-#     # Highlight weekends (Saturday and Sunday)
-#     for day in range(1, 32):
-#         try:
-#             date = datetime(year, month, day)
-#             if date.weekday() == 5 or date.weekday() == 6:  # 5=Saturday, 6=Sunday
-#                 month_calendar = month_calendar.replace(f">{day}<", f' style="background-color: #FFDDC1;">{day}<')  # Light green for weekends
-#         except ValueError:
-#             pass  # Ignore invalid dates
-
-#     # Display the styled calendar using Streamlit's Markdown component
-#     st.markdown(month_calendar, unsafe_allow_html=True)
 
 # Initialize year and month to the current date
 today = datetime.now()
@@ -871,21 +867,137 @@ def main_application():
              # Apply styling to format columns
             styled_non_anchor_df = non_anchor_project_df.style.format(format_dict)
             st.dataframe(styled_non_anchor_df, hide_index=True)
-        #data = fetch_data_from_db("Epics")     
-    #     data = {
-    #     "epic": ["Epic-001"],
-    #     "projectid": ["Project-123"],
-    #     "Effort points": [40],
-    #     "DueDate": ["2024-10-30"],
-    #     "Sprint date": ["2024-10-01"]
-    #    } 
-    #     df = pd.DataFrame(data)
-    #     #grid_return = AgGrid(st.dataframe(data) ,enable_enterprise_modules=False) 
-    #     st.dataframe(df)
+
     elif st.session_state.page == 'Dashboard':
         st.title("Dashboard")
         st.write("Welcome to the Dashboard!")
 
+#     elif st.session_state.page == 'Leaves':
+#         st.markdown(""" <style>
+#                     .LeaveManage {
+#                     color: #ADD8E6;
+#                     font-size: 20px;
+#                     font-weight: bold;  
+#                     }
+                   
+#                      div.stMainBlockContainer.block-container.st-emotion-cache-1jicfl2.ea3mdgi5 {
+#                     padding-top: 2rem !important;
+#                     padding-left: 2rem !important;
+#                     font-size: 12px;
+#         }
+#         div.stVerticalBlock.st-emotion-cache-2ajiip.e1f1d6gn2{
+#                     gap:0;
+#         }
+#         dev.stForm.st-emotion-cache-4uzi61.e10yg2by1{
+#                     background-color:  #ADD8E6 !important;
+#         }
+#                     }
+#                     </style>
+#                     """, unsafe_allow_html=True)
+
+#      # Title for Leave Management
+#         htmlleavestr = """
+# <div class='LeaveManage'>
+# <span>Leave Management</span>
+# </div>
+# """ 
+#         st.html(htmlleavestr)
+#         #st.title("Leave Management")
+
+#         # Create a modal instance
+#         modal = Modal(key="add_leave_modal", title="Add Leave")
+
+#         # Add Leave button in the top-right corner
+#         add_leave_button = st.button("Add Leave", key="add_leave_button", help="Click to add leave")
+
+
+
+#             # Fetch leaves data
+#         leaves_df = fetch_leaves_from_db()
+
+       
+        
+#         if not leaves_df.empty:
+#             # Display the column headers using st.columns
+#             header1, header2, header3, header5= st.columns([1, 1,1,1])
+#             header1.write("**Name**")
+#             header2.write("**Leave From**")
+#             header3.write("**Leave To**")
+#             #header4.write("*Edit Actions*")
+#             header5.write("**Action**")
+
+#             for i, row in leaves_df.iterrows():
+#                 col1, col2, col3, col5 = st.columns([1, 1, 1, 1])
+#                 col1.write(row["name"])
+#                                 # Convert 'leave_from' and 'leave_to' to US date format
+#                 leave_from_us = pd.to_datetime(row["leave_from"]).strftime('%m/%d/%Y')
+#                 leave_to_us = pd.to_datetime(row["leave_to"]).strftime('%m/%d/%Y')
+
+#                 # Write the formatted dates
+#                 col2.write(leave_from_us)
+#                 col3.write(leave_to_us)
+
+
+#                 # Add Edit button
+#                 # edit_button = col4.button("Edit", key=f"edit_{row['id']}")
+#                 # if edit_button:
+#                 #     st.session_state["edit_leave_id"] = row["id"]
+#                 #     st.session_state["edit_leave_from"] = row["leave_from"]
+#                 #     st.session_state["edit_leave_to"] = row["leave_to"]
+#                 #     modal.open()  # Open edit modal
+
+#                 # Add Delete button
+#                 delete_button = col5.button("Delete", key=f"delete_{row['id']}")
+#                 if delete_button:
+#                     delete_leave_from_db(row["id"])
+#                     st.success("Leave deleted successfully!")
+#                     st.rerun()  # Refresh to reflect changes
+#         else:
+#             st.write("No leave records found.")
+
+#         # Trigger modal when Add Leave button is clicked
+#         if add_leave_button:
+#             modal.open()
+#         if modal.is_open() and "edit_leave_id" in st.session_state:
+#             with modal.container():
+#                 st.write("Edit Leave")
+
+#                 with st.form(key='edit_leave_form'):
+#                     leave_from = st.date_input("Leave From", value=st.session_state["edit_leave_from"])
+#                     leave_to = st.date_input("Leave To", value=st.session_state["edit_leave_to"])
+#                     submit_button = st.form_submit_button(label="Update Leave")
+
+#                     if submit_button:
+#                         update_leave_in_db(st.session_state["edit_leave_id"], leave_from, leave_to)
+#                         st.success("Leave updated successfully!")
+#                         st.rerun()  # Refresh to display updated leave
+#         if modal.is_open():
+#             with modal.container():
+                
+
+#                 # Fetch all users from the database
+#                 users_df = fetch_users_from_db()
+
+#                 if not users_df.empty:
+#                     # Form for adding a leave
+
+#                     with st.form(key='leave_form'):
+#                         user = st.selectbox("Select Resource", users_df['name'])
+#                         leave_from = st.date_input("Leave From")
+#                         leave_to = st.date_input("Leave To")
+
+#                         submit_button = st.form_submit_button(label="Submit Leave")
+
+#                         if submit_button:
+#                             # Get the selected user's ID
+#                             user_id = users_df[users_df['name'] == user]['id'].values[0]
+                            
+#                             # Add the leave to the database
+#                             add_leave_to_db(user_id, leave_from, leave_to)
+#                             st.rerun()
+
+#                 else:
+#                     st.write("No Resources available.")
     elif st.session_state.page == 'Leaves':
         st.markdown(""" <style>
                     .LeaveManage {
@@ -893,76 +1005,83 @@ def main_application():
                     font-size: 20px;
                     font-weight: bold;  
                     }
-                   
-                     div.stMainBlockContainer.block-container.st-emotion-cache-1jicfl2.ea3mdgi5 {
+                    
+                    div.stMainBlockContainer.block-container.st-emotion-cache-1jicfl2.ea3mdgi5 {
                     padding-top: 2rem !important;
                     padding-left: 2rem !important;
                     font-size: 12px;
-        }
-        div.stVerticalBlock.st-emotion-cache-2ajiip.e1f1d6gn2{
-                    gap:0;
-        }
-        dev.stForm.st-emotion-cache-4uzi61.e10yg2by1{
-                    background-color:  #ADD8E6 !important;
-        }
+                    }
+                    div.stVerticalBlock.st-emotion-cache-2ajiip.e1f1d6gn2{
+                        gap:0;
+                    }
+                    dev.stForm.st-emotion-cache-4uzi61.e10yg2by1{
+                        background-color:  #ADD8E6 !important;
+                    }
+
+                    /* Styling for clickable icon buttons */
+                    .icon-button {
+                        font-size: 20px;
+                        padding: 0;
+                        margin: 0;
+                        border: none;
+                        background: none;
+                        cursor: pointer;
                     }
                     </style>
                     """, unsafe_allow_html=True)
-
-     # Title for Leave Management
+    
+        # Title for Leave Management
         htmlleavestr = """
-<div class='LeaveManage'>
-<span>Leave Management</span>
-</div>
-""" 
+    <div class='LeaveManage'>
+    <span>Leave Management</span>
+    </div>
+    """ 
         st.html(htmlleavestr)
-        #st.title("Leave Management")
 
-        # Create a modal instance
-        modal = Modal(key="add_leave_modal", title="Add Leave")
+        # Create a modal instance for adding or editing leave
+        modal = Modal(key="add_edit_leave_modal", title="Add/Edit Leave")
 
         # Add Leave button in the top-right corner
         add_leave_button = st.button("Add Leave", key="add_leave_button", help="Click to add leave")
 
-
-
-            # Fetch leaves data
+        # Fetch leaves data
         leaves_df = fetch_leaves_from_db()
 
-       
-        
         if not leaves_df.empty:
             # Display the column headers using st.columns
-            header1, header2, header3, header5= st.columns([1, 1,1,1])
+            header1, header2, header3, header4, header5 = st.columns([1, 1, 1, 1, 1])
             header1.write("**Name**")
             header2.write("**Leave From**")
             header3.write("**Leave To**")
-            #header4.write("*Edit Actions*")
-            header5.write("**Action**")
-
+            header4.write("**Edit**")
+            header5.write("**Delete**")
+            
             for i, row in leaves_df.iterrows():
-                col1, col2, col3, col5 = st.columns([1, 1, 1, 1])
+                col1, col2, col3, col4, col5 = st.columns([1, 1, 1, 1, 1])
                 col1.write(row["name"])
-                # Convert 'leave_from' and 'leave_to' to US date format
+
+                # Convert 'leave_from' and 'leave_to' to a user-friendly format
                 leave_from_us = pd.to_datetime(row["leave_from"]).strftime('%m/%d/%Y')
                 leave_to_us = pd.to_datetime(row["leave_to"]).strftime('%m/%d/%Y')
-
-                # Write the formatted dates
                 col2.write(leave_from_us)
                 col3.write(leave_to_us)
 
+                # Edit icon as a clickable button
+                edit_clicked = col4.button("Edit", key=f"edit_{row['id']}", help="Edit Leave")
 
-                # Add Edit button
-                # edit_button = col4.button("Edit", key=f"edit_{row['id']}")
-                # if edit_button:
-                #     st.session_state["edit_leave_id"] = row["id"]
-                #     st.session_state["edit_leave_from"] = row["leave_from"]
-                #     st.session_state["edit_leave_to"] = row["leave_to"]
-                #     modal.open()  # Open edit modal
+                # Delete icon as a clickable button
+                delete_clicked = col5.button("Delete", key=f"delete_{row['id']}", help="Delete Leave")
 
-                # Add Delete button
-                delete_button = col5.button("Delete", key=f"delete_{row['id']}")
-                if delete_button:
+                # Check if edit icon was clicked
+                if edit_clicked:
+                    st.session_state["edit_leave_id"] = row["id"]
+                    st.session_state["edit_leave_from"] = pd.to_datetime(row["leave_from"])
+                    st.session_state["edit_leave_to"] = pd.to_datetime(row["leave_to"])
+                    st.session_state["edit_user_name"] = row["name"]
+                    modal.open()  # Open edit modal
+
+                # Check if delete icon was clicked
+                if delete_clicked:
                     delete_leave_from_db(row["id"])
                     st.success("Leave deleted successfully!")
                     st.rerun()  # Refresh to reflect changes
@@ -971,45 +1090,74 @@ def main_application():
 
         # Trigger modal when Add Leave button is clicked
         if add_leave_button:
+            st.session_state.pop("edit_leave_id", None)  # Clear any existing edit ID
             modal.open()
-        if modal.is_open() and "edit_leave_id" in st.session_state:
-            with modal.container():
-                st.write("Edit Leave")
 
-                with st.form(key='edit_leave_form'):
-                    leave_from = st.date_input("Leave From", value=st.session_state["edit_leave_from"])
-                    leave_to = st.date_input("Leave To", value=st.session_state["edit_leave_to"])
-                    submit_button = st.form_submit_button(label="Update Leave")
-
-                    if submit_button:
-                        update_leave_in_db(st.session_state["edit_leave_id"], leave_from, leave_to)
-                        st.success("Leave updated successfully!")
-                        st.rerun()  # Refresh to display updated leave
         if modal.is_open():
             with modal.container():
-                
-
                 # Fetch all users from the database
                 users_df = fetch_users_from_db()
 
                 if not users_df.empty:
-                    # Form for adding a leave
-
+                    # Start the form inside the modal
                     with st.form(key='leave_form'):
-                        user = st.selectbox("Select User", users_df['name'])
-                        leave_from = st.date_input("Leave From")
-                        leave_to = st.date_input("Leave To")
+                        if "edit_leave_id" in st.session_state:
+                            # Editing existing leave
+                            st.write("Edit Leave")
+                            try:
+                                user_name = st.session_state["edit_user_name"]
+                                user_options = users_df['name'].tolist()  # Convert to a list of strings
+                                
+                                # Find the index of the selected user
+                                user_index = user_options.index(user_name) if user_name in user_options else 0
+                                
+                                user_name = st.selectbox("Select User", user_options, index=user_index)
+                            except Exception as e:
+                                st.error(f"Error: {e}")
+                                user_name = st.selectbox("Select User", users_df['name'].tolist())  # Fallback
 
-                        submit_button = st.form_submit_button(label="Submit Leave")
+                            # Convert leave_from to datetime.date for compatibility
+                            leave_from = st.session_state["edit_leave_from"].date() if isinstance(st.session_state["edit_leave_from"], pd.Timestamp) else st.session_state["edit_leave_from"]
+                            leave_to = st.session_state["edit_leave_to"].date() if isinstance(st.session_state["edit_leave_to"], pd.Timestamp) else st.session_state["edit_leave_to"]
+
+                            leave_from = st.date_input("Leave From", value=leave_from)
+
+                            # Dynamically adjust the default value of leave_to
+                            leave_to_default = max(leave_to, leave_from)
+                            leave_to = st.date_input(
+                                "Leave To", 
+                                value=leave_to_default,
+                                min_value=leave_from  # Restrict minimum date to "From Date"
+                            )
+                            submit_label = "Update Leave"
+                        else:
+                            # Adding new leave
+                            st.write("Add Leave")
+                            user_name = st.selectbox("Select User", users_df['name'].tolist())
+                            leave_from = st.date_input("Leave From")
+                            leave_to = st.date_input(
+                                "Leave To", 
+                                min_value=leave_from,  # Restrict minimum date to "From Date"
+                                value=leave_from  # Default value is the same as "From Date"
+                            )
+                            submit_label = "Submit Leave"
+
+                        # Add the submit button inside the form
+                        submit_button = st.form_submit_button(label=submit_label)
 
                         if submit_button:
-                            # Get the selected user's ID
-                            user_id = users_df[users_df['name'] == user]['id'].values[0]
-                            
-                            # Add the leave to the database
-                            add_leave_to_db(user_id, leave_from, leave_to)
-                            st.rerun()
+                            # Edit existing leave
+                            if "edit_leave_id" in st.session_state:
+                                update_leave_in_db(st.session_state["edit_leave_id"], leave_from, leave_to)
+                                st.success("Leave updated successfully!")
+                                st.session_state.pop("edit_leave_id")  # Clear edit session state
+                            else:
+                                # Add new leave
+                                user_id = users_df[users_df['name'] == user_name]['id'].values[0]
+                                add_leave_to_db(user_id, leave_from, leave_to)
+                                st.success("Leave added successfully!")
 
+                            st.rerun()  # Refresh to display the updated list
                 else:
                     st.write("No users available.")
     elif st.session_state.page == 'Resources':
@@ -1075,6 +1223,8 @@ def main_application():
             
             if not users.empty:
                 usersdf = pd.DataFrame(users)
+                # Rename columns in the DataFrame
+                usersdf = usersdf.rename(columns={"name": "Name", "email": "Email"})
                 st.dataframe(usersdf,  use_container_width=True,  hide_index=True)
             else:
                 st.write("No resources found.")
@@ -1083,6 +1233,7 @@ def main_application():
 
                     # Check if dummyusers DataFrame is not empty
             if not dummyusers.empty:
+                dummyusers = dummyusers.rename(columns={"name": "Name", "email": "Email"})
                 st.subheader("Newly Added Resources")
                 st.markdown(
     "<p style='font-size:12px;'>(These are dummy entries, intended only for testing effort point allocations.)</p>",
@@ -1126,7 +1277,7 @@ def main_application():
                 # Check if selected_rows is a non-empty DataFrame
                 if selected_rows is not None and  not selected_rows.empty:
                     # Extract the email value from the selected row
-                    email_to_delete = selected_rows.iloc[0]['email']
+                    email_to_delete = selected_rows.iloc[0]['Email']
                     
                     # Display a delete button for confirmation
                     if st.button("Delete"):
@@ -1137,34 +1288,7 @@ def main_application():
                         conn.close()
                         st.success(f"Deleted resource with email: {email_to_delete}")
                         st.rerun()  # Refresh to show updated data
-           
-
-            # # Display the 'dummyusers' DataFrame if it is not empty with delete option
-            # if not dummyusers.empty:
-            #     st.write("**Newly Added Resources**")
-                
-            #     # Display table headers
-            #     col1, col2, col3 = st.columns([2, 3, 1])
-            #     col1.write("**Name**")
-            #     col2.write("**Email**")
-            #     col3.write("**Delete**")
-
-            #     # Display each row in the dummyusers DataFrame with a delete button
-            #     for i, row in dummyusers.iterrows():
-            #         col1, col2, col3 = st.columns([2, 3, 1])
-            #         col1.write(row["name"])
-            #         col2.write(row["email"])
-                    
-            #         # Add a delete button for each user
-            #         if col3.button("Delete", key=f"delete_{i}"):
-            #             # Delete the user from the database
-            #             conn = sqlite3.connect(DB_PATH)
-            #             conn.execute("DELETE FROM users WHERE email = ?", (row["email"],))
-            #             conn.commit()
-            #             conn.close()
-                        
-            #             st.success(f"Deleted user: {row['name']} ({row['email']})")
-            #             st.rerun()  # Refresh the page to reflect change
+         
                
     elif st.session_state.page == 'Holidays':
         st.markdown(""" <style>
@@ -1313,7 +1437,8 @@ def main_application():
                     col1, col2, col3 = st.columns([2, 2, 1])
                     col1.write(row["holiday_name"])
                     us_formatted_date = pd.to_datetime(row["holiday_date"]).strftime('%m/%d/%Y')
-                    col2.write(us_formatted_date)
+                    col2.write(us_formatted_date)   
+                 
 
                     # Add delete button for each holiday
                     delete_button = col3.button("Delete", key=f"delete_{row['holiday_date']}")
