@@ -899,7 +899,7 @@ def main_application():
             # Replace values based on presence (non-NaN -> "Yes", NaN -> "No")
             filtered_data[columns_to_check] = filtered_data[columns_to_check].notna().replace({True: "Yes", False: "No"})
 
-            st.write(filtered_data)
+            st.dataframe(filtered_data, hide_index=True)
 
     elif st.session_state.page == 'Dashboard':
         st.title("Dashboard")
