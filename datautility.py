@@ -270,14 +270,16 @@ def distribute_epics_to_sprints(anchor_projects_df, non_anchor_projects_df, upco
         for _, epic in projects_df.iterrows():
             remaining_effort = epic['total_effort_from_pbis']
             nearest_due_date = pd.to_datetime(epic['nearest_doc_date']) if not pd.isnull(epic['nearest_doc_date']) else None
-            print(nearest_due_date)
+         
             # Filter relevant sprints based on the nearest due date
             sprints = upcoming_sprints_df.copy()
             sprints['overdue'] = False  # Flag for overdue efforts
             if nearest_due_date is not None:
-               
+                print("Start_date dtype:", sprints['Start_date'].dtype)
+                print("nearest_due_date dtype:", type(nearest_due_date))# <--- This line   
+                print("Pandas Version:", pd.__version__)         
                 sprints.loc[sprints['Start_date'] > nearest_due_date, 'overdue'] = True
-
+               
             # Calculate average effort per sprint and check against minimumEpicPoints
             sprints_remaining = len(sprints)
             avg_effort_per_sprint = remaining_effort / sprints_remaining if sprints_remaining > 0 else 0
