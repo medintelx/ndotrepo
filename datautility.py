@@ -274,9 +274,7 @@ def distribute_epics_to_sprints(anchor_projects_df, non_anchor_projects_df, upco
             sprints = upcoming_sprints_df.copy()
             sprints['overdue'] = False  # Flag for overdue efforts
             if nearest_due_date is not None:
-                print(sprints['Start_date'])
-                print("nearest")
-                print(nearest_due_date)
+               
                 sprints.loc[sprints['Start_date'] > nearest_due_date, 'overdue'] = True
 
             # Calculate average effort per sprint and check against minimumEpicPoints
@@ -333,7 +331,7 @@ def distribute_epics_to_sprints(anchor_projects_df, non_anchor_projects_df, upco
                     'Sprint': sprint_name,
                     'Effort': item['project_epic_effort']
                 })
-
+    print(allocation_results)
     # Create DataFrame and pivot it so that each sprint is a column with combined efforts in each cell
     allocations_df = pd.DataFrame(allocation_results)
     print(allocations_df)
