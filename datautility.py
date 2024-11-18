@@ -239,6 +239,93 @@ import numpy as np
 #     #return df_uniform.style.applymap(highlight_overdue, subset=df_uniform.columns)
 #     return df_uniform,anchor_projects_df,non_anchor_projects_df
 
+# def distribute_epics_to_sprints(anchor_projects_df, non_anchor_projects_df, upcoming_sprints_df):
+#     # Initialize dictionary to store sprint allocations
+#     sprint_allocations = {sprint: {'anchor': [], 'non_anchor': [], 'remaining_anchor_effort': 0, 'remaining_non_anchor_effort': 0}
+#                           for sprint in upcoming_sprints_df['Iteration']}
+
+#     # Initialize remaining capacity for each sprint based on total allowed capacity
+#     for _, sprint in upcoming_sprints_df.iterrows():
+#         sprint_name = sprint['Iteration']
+#         # Set remaining sprint capacity based on total allowed effort points for all projects
+#         sprint_allocations[sprint_name]['remaining_anchor_effort'] = sprint['AnchorEffortPoints']
+#         sprint_allocations[sprint_name]['remaining_non_anchor_effort'] = sprint['NonAnchorEffortPoints']
+
+#     # Function to allocate effort for a set of projects (either anchor or non-anchor)
+#     def allocate_projects(projects_df, project_type):
+#         # Determine the appropriate project-wise maximum effort column based on project type
+#         max_effort_per_sprint_column = 'MaxAnchorEffortPointspersprint' if project_type == 'anchor' else 'MaxNonAnchorEffortPointspersprint'
+
+#         for _, epic in projects_df.iterrows():
+#             remaining_effort = epic['total_effort_from_pbis']
+#             nearest_due_date = epic['nearest_doc_date'] if not pd.isnull(epic['nearest_doc_date']) else None
+
+#             # Distribute epic effort across sprints, respecting sprint capacity limits and project-wise maximum limits
+#             for _, sprint in upcoming_sprints_df.iterrows():
+#                 sprint_name = sprint['Iteration']
+#                 min_epic_effort = sprint['Effort_points_per_user']  # Minimum required effort for the epic in this sprint
+#                 sprint_start_date = sprint['Start_date']
+#                 sprint_end_date = sprint['End_date']
+
+#                 # Project-wise maximum effort points for this sprint (specific to anchor or non-anchor)
+#                 max_project_effort_per_sprint = sprint[max_effort_per_sprint_column]
+                
+#                 # Calculate average effort per remaining sprints to ensure balanced distribution
+#                 sprints_remaining = len(upcoming_sprints_df[upcoming_sprints_df['Iteration'] >= sprint_name])
+#                 avg_effort_per_sprint = remaining_effort / sprints_remaining
+
+#                 # Remove minimum constraint to allow remaining effort allocation if below threshold
+#                 if avg_effort_per_sprint < min_epic_effort and (not nearest_due_date or sprint_start_date > nearest_due_date) and remaining_effort < min_epic_effort:
+#                     # Allow allocation of any remaining effort, even if below minimum per sprint
+#                     avg_effort_per_sprint = remaining_effort
+                
+#                 # Determine the remaining sprint capacity and cap it by project-wise and sprint-wise maximums
+#                 remaining_sprint_capacity = sprint_allocations[sprint_name][f'remaining_{project_type}_effort']
+#                 allocated_effort = min(remaining_effort, remaining_sprint_capacity, max_project_effort_per_sprint)
+
+#                 # Allocate effort to this sprint within both project-wise and sprint-wise limits
+#                 if allocated_effort > 0:
+#                     effort_text = f"{int(epic['projects_Work_Item_ID'])} ({'A' if project_type=='anchor'  else 'NA'}) - {epic['epics_System_Title']} ({allocated_effort}{' overdue' if nearest_due_date and sprint_end_date > nearest_due_date else ''})"
+#                     sprint_allocations[sprint_name][project_type].append({'project_epic_effort': effort_text})
+                    
+#                     # Update remaining capacity and remaining effort
+#                     sprint_allocations[sprint_name][f'remaining_{project_type}_effort'] -= allocated_effort
+#                     remaining_effort -= allocated_effort
+
+#                     # If effort has been fully allocated, move on to the next epic
+#                     if remaining_effort <= 0:
+#                         break
+
+#     # Allocate efforts for anchor and non-anchor projects separately
+#     allocate_projects(anchor_projects_df, 'anchor')
+#     allocate_projects(non_anchor_projects_df, 'non_anchor')
+
+#     # Convert allocations to a list of dictionaries for each sprint with combined data in each cell
+#     allocation_results = []
+#     for sprint_name, allocations in sprint_allocations.items():
+#         for project_type, items in {'anchor': allocations['anchor'], 'non_anchor': allocations['non_anchor']}.items():
+#             for item in items:
+#                 allocation_results.append({
+#                     'Sprint': sprint_name,
+#                     'Effort': item['project_epic_effort']
+#                 })
+                
+#     # Create DataFrame and pivot it so that each sprint is a column with combined efforts in each cell
+#     allocations_df = pd.DataFrame(allocation_results)
+#     # Ensure the pivot table columns follow the order of sorted Start_date
+#     sprint_order = upcoming_sprints_df['Iteration'].tolist()
+#     pivot_df = allocations_df.pivot(columns='Sprint', values='Effort').reindex(columns=sprint_order).reset_index(drop=True)
+#     df_uniform = pivot_df.apply(lambda x: pd.Series(x.dropna().values), axis=0)
+#     # Apply formatting for overdue items in red
+#     def highlight_overdue(val):
+#         if isinstance(val, str) and 'overdue' in val:
+#             return 'color: red'
+#         return ''
+
+#     # Return the styled pivot table with no index column displayed
+#     return df_uniform,anchor_projects_df,non_anchor_projects_df
+
+
 def distribute_epics_to_sprints(anchor_projects_df, non_anchor_projects_df, upcoming_sprints_df):
     # Initialize dictionary to store sprint allocations
     sprint_allocations = {sprint: {'anchor': [], 'non_anchor': [], 'remaining_anchor_effort': 0, 'remaining_non_anchor_effort': 0}
@@ -247,54 +334,57 @@ def distribute_epics_to_sprints(anchor_projects_df, non_anchor_projects_df, upco
     # Initialize remaining capacity for each sprint based on total allowed capacity
     for _, sprint in upcoming_sprints_df.iterrows():
         sprint_name = sprint['Iteration']
-        # Set remaining sprint capacity based on total allowed effort points for all projects
         sprint_allocations[sprint_name]['remaining_anchor_effort'] = sprint['AnchorEffortPoints']
         sprint_allocations[sprint_name]['remaining_non_anchor_effort'] = sprint['NonAnchorEffortPoints']
 
     # Function to allocate effort for a set of projects (either anchor or non-anchor)
     def allocate_projects(projects_df, project_type):
-        # Determine the appropriate project-wise maximum effort column based on project type
         max_effort_per_sprint_column = 'MaxAnchorEffortPointspersprint' if project_type == 'anchor' else 'MaxNonAnchorEffortPointspersprint'
-
+        anchor_projects_df['nearest_doc_date'] = pd.to_datetime(anchor_projects_df['nearest_doc_date']).dt.tz_localize(None)
+        upcoming_sprints_df['Start_date'] = pd.to_datetime(upcoming_sprints_df['Start_date'])
         for _, epic in projects_df.iterrows():
             remaining_effort = epic['total_effort_from_pbis']
-            nearest_due_date = epic['nearest_doc_date'] if not pd.isnull(epic['nearest_doc_date']) else None
+            nearest_due_date = pd.to_datetime(epic['nearest_doc_date']) if not pd.isnull(epic['nearest_doc_date']) else None
 
-            # Distribute epic effort across sprints, respecting sprint capacity limits and project-wise maximum limits
-            for _, sprint in upcoming_sprints_df.iterrows():
+            # Filter relevant sprints based on the nearest due date
+            sprints = upcoming_sprints_df.copy()
+            sprints['Start_date'] = pd.to_datetime(sprints['Start_date'])
+
+            if nearest_due_date is not None:
+                sprints = sprints[sprints['Start_date'] <= nearest_due_date]
+
+            # Calculate average effort per sprint and check against minimumEpicPoints
+            sprints_remaining = len(sprints)
+            avg_effort_per_sprint = remaining_effort / sprints_remaining if sprints_remaining > 0 else 0
+            minimum_epic_points = upcoming_sprints_df['minimumEpicPoints'].iloc[0]
+
+            if avg_effort_per_sprint < minimum_epic_points:
+                # If average effort is below minimum, prioritize sprints closer to the due date
+                sprints['proximity'] = abs((sprints['Start_date'] - nearest_due_date).dt.days)
+                sprints = sprints.sort_values(by='proximity')
+            else:
+                # Otherwise, distribute evenly across all eligible sprints
+                sprints = sprints.sort_values(by='Start_date')
+
+            # Allocate effort to the selected sprints
+            for _, sprint in sprints.iterrows():
                 sprint_name = sprint['Iteration']
-                min_epic_effort = sprint['Effort_points_per_user']  # Minimum required effort for the epic in this sprint
-                sprint_start_date = sprint['Start_date']
-                sprint_end_date = sprint['End_date']
-
-                # Project-wise maximum effort points for this sprint (specific to anchor or non-anchor)
                 max_project_effort_per_sprint = sprint[max_effort_per_sprint_column]
-                
-                # Calculate average effort per remaining sprints to ensure balanced distribution
-                sprints_remaining = len(upcoming_sprints_df[upcoming_sprints_df['Iteration'] >= sprint_name])
-                avg_effort_per_sprint = remaining_effort / sprints_remaining
 
-                # Remove minimum constraint to allow remaining effort allocation if below threshold
-                if avg_effort_per_sprint < min_epic_effort and (not nearest_due_date or sprint_start_date > nearest_due_date) and remaining_effort < min_epic_effort:
-                    # Allow allocation of any remaining effort, even if below minimum per sprint
-                    avg_effort_per_sprint = remaining_effort
-                
-                # Determine the remaining sprint capacity and cap it by project-wise and sprint-wise maximums
                 remaining_sprint_capacity = sprint_allocations[sprint_name][f'remaining_{project_type}_effort']
                 allocated_effort = min(remaining_effort, remaining_sprint_capacity, max_project_effort_per_sprint)
 
-                # Allocate effort to this sprint within both project-wise and sprint-wise limits
-                if allocated_effort > 0:
-                    effort_text = f"{int(epic['projects_Work_Item_ID'])} ({'A' if project_type=='anchor'  else 'NA'}) - {epic['epics_System_Title']} ({allocated_effort}{' overdue' if nearest_due_date and sprint_end_date > nearest_due_date else ''})"
+                # Ensure allocated effort meets the minimum required points
+                if allocated_effort >= minimum_epic_points:
+                    effort_text = f"{int(epic['projects_Work_Item_ID'])} ({'A' if project_type == 'anchor' else 'NA'}) - {epic['epics_System_Title']} ({allocated_effort}{' overdue' if nearest_due_date and sprint['Start_date'] > nearest_due_date else ''})"
                     sprint_allocations[sprint_name][project_type].append({'project_epic_effort': effort_text})
-                    
-                    # Update remaining capacity and remaining effort
+
+                    # Update capacities and remaining effort
                     sprint_allocations[sprint_name][f'remaining_{project_type}_effort'] -= allocated_effort
                     remaining_effort -= allocated_effort
 
-                    # If effort has been fully allocated, move on to the next epic
-                    if remaining_effort <= 0:
-                        break
+                if remaining_effort <= 0:
+                    break
 
     # Allocate efforts for anchor and non-anchor projects separately
     allocate_projects(anchor_projects_df, 'anchor')
@@ -309,21 +399,17 @@ def distribute_epics_to_sprints(anchor_projects_df, non_anchor_projects_df, upco
                     'Sprint': sprint_name,
                     'Effort': item['project_epic_effort']
                 })
-                
+
     # Create DataFrame and pivot it so that each sprint is a column with combined efforts in each cell
     allocations_df = pd.DataFrame(allocation_results)
-    # Ensure the pivot table columns follow the order of sorted Start_date
     sprint_order = upcoming_sprints_df['Iteration'].tolist()
     pivot_df = allocations_df.pivot(columns='Sprint', values='Effort').reindex(columns=sprint_order).reset_index(drop=True)
     df_uniform = pivot_df.apply(lambda x: pd.Series(x.dropna().values), axis=0)
-    # Apply formatting for overdue items in red
-    def highlight_overdue(val):
-        if isinstance(val, str) and 'overdue' in val:
-            return 'color: red'
-        return ''
 
-    # Return the styled pivot table with no index column displayed
-    return df_uniform,anchor_projects_df,non_anchor_projects_df
+    # Return the resulting allocation DataFrame
+    return df_uniform, anchor_projects_df, non_anchor_projects_df
+
+
 
 # Sample usage
 # formatted_df = distribute_epics_to_sprints(anchor_projects_df, non_anchor_projects_df, upcoming_sprints_df)
@@ -599,7 +685,7 @@ def calculate_days_overlap_exclude_weekends_and_holidays(start_date, end_date, s
 
  # Function to fetch the latest weightage configuration from the database
 def fetch_latest_config():
-    conn = sqlite3.connect('NDOTDATA.db')
+    conn = sqlite3.connect(db_path)
     query = '''
         SELECT AnchorWgt, NonAnchorWgt, MiscWgt, AnchorMaxPoints, NonAnchorMaxPoints, EpicMinEffortPoints 
         FROM weightageconfig
