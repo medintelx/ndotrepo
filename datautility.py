@@ -281,7 +281,7 @@ def distribute_epics_to_sprints(anchor_projects_df, non_anchor_projects_df, upco
             sprints_remaining = len(sprints)
             avg_effort_per_sprint = remaining_effort / sprints_remaining if sprints_remaining > 0 else 0
             minimum_epic_points = upcoming_sprints_df['minimumEpicPoints'].iloc[0]
-
+            print(minimum_epic_points)
             # Adjust start sprint if average effort falls below the minimumEpicPoints
             if avg_effort_per_sprint < minimum_epic_points:
                 total_effort = remaining_effort
