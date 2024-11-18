@@ -268,7 +268,7 @@ def distribute_epics_to_sprints(anchor_projects_df, non_anchor_projects_df, upco
         max_effort_per_sprint_column = 'MaxAnchorEffortPointspersprint' if project_type == 'anchor' else 'MaxNonAnchorEffortPointspersprint'
         for _, epic in projects_df.iterrows():
             remaining_effort = epic['total_effort_from_pbis']
-            nearest_due_date = pd.to_datetime(epic['nearest_doc_date'], errors='coerce').dt.tz_localize(None) if not pd.isnull(epic['nearest_doc_date']) else None
+            nearest_due_date = pd.to_datetime(epic['nearest_doc_date']) if not pd.isnull(epic['nearest_doc_date']) else None
 
             # Filter relevant sprints based on the nearest due date
             sprints = upcoming_sprints_df.copy()
