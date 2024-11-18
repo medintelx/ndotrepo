@@ -331,6 +331,8 @@ def distribute_epics_to_sprints(anchor_projects_df, non_anchor_projects_df, upco
     sprint_allocations = {sprint: {'anchor': [], 'non_anchor': [], 'remaining_anchor_effort': 0, 'remaining_non_anchor_effort': 0}
                           for sprint in upcoming_sprints_df['Iteration']}
     anchor_projects_df['nearest_doc_date'] = pd.to_datetime(anchor_projects_df['nearest_doc_date'], errors='coerce').dt.tz_localize(None)
+    non_anchor_projects_df['nearest_doc_date'] = pd.to_datetime(non_anchor_projects_df['nearest_doc_date'], errors='coerce').dt.tz_localize(None)
+   
     upcoming_sprints_df['Start_date'] = pd.to_datetime(upcoming_sprints_df['Start_date'], errors='coerce').dt.tz_localize(None)
 
     # Initialize remaining capacity for each sprint based on total allowed capacity
