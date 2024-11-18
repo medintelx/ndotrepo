@@ -3,6 +3,7 @@ import sqlite3
 from datetime import datetime, timedelta
 import numpy as np
 import os
+import streamlit as st
 #from dotenv import load_dotenv
 # load_dotenv()
 
@@ -151,8 +152,6 @@ def sort_projects_dataframe(df):
 import pandas as pd
 import numpy as np
 
-import pandas as pd
-import numpy as np
 
 # def distribute_epics_to_sprints(anchor_projects_df, non_anchor_projects_df, upcoming_sprints_df):
 #     # Initialize dictionary to store sprint allocations
@@ -238,7 +237,7 @@ import numpy as np
 #     # Return the styled pivot table with no index column displayed
 #     #return df_uniform.style.applymap(highlight_overdue, subset=df_uniform.columns)
 #     return df_uniform,anchor_projects_df,non_anchor_projects_df
-
+@st.cache_data  
 def distribute_epics_to_sprints(anchor_projects_df, non_anchor_projects_df, upcoming_sprints_df):
     # Initialize dictionary to store sprint allocations
     sprint_allocations = {sprint: {'anchor': [], 'non_anchor': [], 'remaining_anchor_effort': 0, 'remaining_non_anchor_effort': 0}
@@ -334,7 +333,7 @@ def distribute_epics_to_sprints(anchor_projects_df, non_anchor_projects_df, upco
 # Sample usage with upcoming_sprints_df containing the max effort limits
 # formatted_df = distribute_epics_to_sprints(anchor_projects_df, non_anchor_projects_df, upcoming_sprints_df)
 # formatted_df  # Display the styled pivot table without the extra index column
-
+@st.cache_data
 def get_project_data():
     # Define the SQL queries to select only the required columns
     projects_query = """
