@@ -7,7 +7,7 @@ import os
 # load_dotenv()
 
 # DB_PATH = os.getenv('DB_PATH')
-db_path='NDOTDATA.db'
+db_path='NDOTDATAL.db'
 def calculate_days_overlap_exclude_weekends(start1, end1, start2, end2):
     """Calculate the number of overlapping weekdays (excluding Saturdays and Sundays) between two date ranges."""
     start_date = max(start1, start2)
@@ -336,6 +336,7 @@ def distribute_epics_to_sprints(anchor_projects_df, non_anchor_projects_df, upco
 
     # Create DataFrame and pivot it so that each sprint is a column with combined efforts in each cell
     allocations_df = pd.DataFrame(allocation_results)
+    print(allocations_df)
     sprint_order = upcoming_sprints_df['Iteration'].tolist()
     pivot_df = allocations_df.pivot(columns='Sprint', values='Effort').reindex(columns=sprint_order).reset_index(drop=True)
     df_uniform = pivot_df.apply(lambda x: pd.Series(x.dropna().values), axis=0)
