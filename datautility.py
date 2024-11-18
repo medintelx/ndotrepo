@@ -265,11 +265,12 @@ def distribute_epics_to_sprints(anchor_projects_df, non_anchor_projects_df, upco
 
     # Function to allocate effort for a set of projects (either anchor or non-anchor)
     def allocate_projects(projects_df, project_type):
+        print(projects_df)
         max_effort_per_sprint_column = 'MaxAnchorEffortPointspersprint' if project_type == 'anchor' else 'MaxNonAnchorEffortPointspersprint'
         for _, epic in projects_df.iterrows():
             remaining_effort = epic['total_effort_from_pbis']
             nearest_due_date = pd.to_datetime(epic['nearest_doc_date']) if not pd.isnull(epic['nearest_doc_date']) else None
-
+            print(nearest_due_date)
             # Filter relevant sprints based on the nearest due date
             sprints = upcoming_sprints_df.copy()
             sprints['overdue'] = False  # Flag for overdue efforts
