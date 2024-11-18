@@ -295,7 +295,7 @@ def distribute_epics_to_sprints(anchor_projects_df, non_anchor_projects_df, upco
 
             # Sort sprints by start date to allocate sequentially
             #sprints = sprints.sort_values(by=['overdue', 'Start_date'])
-
+            
             # Allocate effort to the selected sprints
             for _, sprint in sprints.iterrows():
                 sprint_name = sprint['Iteration']
@@ -311,14 +311,15 @@ def distribute_epics_to_sprints(anchor_projects_df, non_anchor_projects_df, upco
                 if allocated_effort > 0:
                     effort_text = f"{int(epic['projects_Work_Item_ID'])} ({'A' if project_type == 'anchor' else 'NA'}) - {epic['epics_System_Title']} ({allocated_effort}{overdue_label})"
                     sprint_allocations[sprint_name][project_type].append({'project_epic_effort': effort_text})
-
+                     
                     # Update capacities and remaining effort
                     sprint_allocations[sprint_name][f'remaining_{project_type}_effort'] -= allocated_effort
+                    print(sprint_allocations)
                     remaining_effort -= allocated_effort
 
                 if remaining_effort <= 0:
                     break
-
+   
     # Allocate efforts for anchor and non-anchor projects separately
     allocate_projects(anchor_projects_df, 'anchor')
     allocate_projects(non_anchor_projects_df, 'non_anchor')
@@ -332,7 +333,7 @@ def distribute_epics_to_sprints(anchor_projects_df, non_anchor_projects_df, upco
                     'Sprint': sprint_name,
                     'Effort': item['project_epic_effort']
                 })
-    print(allocation_results)
+    
     # Create DataFrame and pivot it so that each sprint is a column with combined efforts in each cell
     allocations_df = pd.DataFrame(allocation_results)
     print(allocations_df)
