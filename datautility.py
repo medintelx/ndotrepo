@@ -359,8 +359,10 @@ def distribute_epics_to_sprints(anchor_projects_df, non_anchor_projects_df, upco
             minimum_epic_points = upcoming_sprints_df['minimumEpicPoints'].iloc[0]
 
             if avg_effort_per_sprint < minimum_epic_points:
-                # If average effort is below minimum, prioritize sprints closer to the due date
-                sprints['proximity'] = abs((sprints['Start_date'] - nearest_due_date).dt.days)
+                if nearest_due_date is None:
+                    sprints['proximity'] = float('inf')  # Assign infinite proximity for missing due dates
+                else:
+                    sprints['proximity'] = abs((sprints['Start_date'] - nearest_due_date).dt.days)
                 sprints = sprints.sort_values(by='proximity')
             else:
                 # Otherwise, distribute evenly across all eligible sprints
