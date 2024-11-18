@@ -14,6 +14,7 @@ import pandas as pd
 import datautilitydevops as du
 from dotenv import load_dotenv
 from st_aggrid.shared import GridUpdateMode
+#import streamlitforecastapp as devopsdata
 load_dotenv()
 
 
@@ -329,6 +330,7 @@ def add_config_to_db(AnchorWgt,NonAnchorWgt, MiscWgt, AnchorMaxPoints, NonAnchor
     conn.close()
 
 # Function to fetch data from the database based on work item type
+@st.cache_data
 def fetch_data_from_db(work_item_type):
     conn = sqlite3.connect(DB_PATH)
     query = ""
@@ -683,228 +685,255 @@ def main_application():
              
                     </style>
                     """, unsafe_allow_html=True)
-        with st.spinner('Loading Forecast...'):
-            st.title("Forecast")
-            mcol1, mcol2 = st.columns([1, 5])
-            # Fetch the latest configuration values
-            latest_config = du.fetch_latest_config()
-            
-            # Default values if no configuration exists
-            if latest_config is not None:
-                AnchorWgt_default = latest_config['AnchorWgt']
-                NonAnchorWgt_default = latest_config['NonAnchorWgt']
-                MiscWgt_default = latest_config['MiscWgt']
-                AnchorMaxPoints_default = latest_config['AnchorMaxPoints']
-                NonAnchorMaxPoints_default = latest_config['NonAnchorMaxPoints']
-                EpicMinEffortPoints_default = latest_config['EpicMinEffortPoints']
-            else:
-                AnchorWgt_default = 0
-                NonAnchorWgt_default = 0
-                MiscWgt_default = 0
-                AnchorMaxPoints_default = 0
-                NonAnchorMaxPoints_default = 0
-                EpicMinEffortPoints_default = 0
-            with mcol1:
-                # Create the form inside a div with the custom class
-                with st.form(key='config_form'):
-                    st.markdown('<div class="custom-form">', unsafe_allow_html=True)
-                    #st.write("Project Weightage")
-                    with st.container():
-                        with st.popover("Type Weights"):
-                        # Input fields will be stacked vertically inside the container
-                            MiscWgt = st.number_input("Miscellaneous Weight %", min_value=0, value=MiscWgt_default,step=1, format="%d")
-                            AnchorWgt = st.number_input("Anchor Weight %", min_value=0, value=AnchorWgt_default, step=1, format="%d")
-                            NonAnchorWgt = st.number_input("Non-Anchor Weight %", min_value=0, value=(100-AnchorWgt), step=1, format="%d", disabled=True)
-                        st.divider()
-                        with st.popover("Max Points "):                     
-                            AnchorMaxPoints = st.number_input("Anchor Max Effort Points", min_value=0,  value=AnchorMaxPoints_default,  step=1, format="%d")
-                            NonAnchorMaxPoints = st.number_input("Non-Anchor Effort Max Points", min_value=0, value=NonAnchorMaxPoints_default , step=1, format="%d")
-                        st.divider()
-                        with st.popover("Min Points "):   
-                            EpicMinEffortPoints = st.number_input("Epic Min Effort Points", min_value=0,value=EpicMinEffortPoints_default, step=1, format="%d")
-                        
-                        # Submit button at the end
-                        st.divider()
-                        submit_button = st.form_submit_button(label="Forecast")
-                        st.markdown('</div>', unsafe_allow_html=True)
-                        if submit_button:
-                            add_config_to_db(AnchorWgt, NonAnchorWgt, MiscWgt, AnchorMaxPoints, NonAnchorMaxPoints, EpicMinEffortPoints)
-                        # Recompute the updated forecast data based on the new configuration
-                            anchor_project_df, non_anchor_project_df,projects_display_df = du.get_project_data()
-                            
-                            upcoming_sprint_data = du.get_upcoming_sprints_with_effortpoints_and_weightage()
-
-                            # Update session state with new forecast data for projects
-                            st.session_state.updated_forecast_df = du.distribute_epics_to_sprints(anchor_project_df, non_anchor_project_df, upcoming_sprint_data)
-                            # st.rerun()
-                            # st.toast("Forecast updated successfully!")
+        #with st.spinner('Loading Forecast...'):
+        st.title("Forecast")
+        mcol1, mcol2 = st.columns([1, 5])
+        # Fetch the latest configuration values
+        latest_config = du.fetch_latest_config()
+        
+        # Default values if no configuration exists
+        if latest_config is not None:
+            AnchorWgt_default = latest_config['AnchorWgt']
+            NonAnchorWgt_default = latest_config['NonAnchorWgt']
+            MiscWgt_default = latest_config['MiscWgt']
+            AnchorMaxPoints_default = latest_config['AnchorMaxPoints']
+            NonAnchorMaxPoints_default = latest_config['NonAnchorMaxPoints']
+            EpicMinEffortPoints_default = latest_config['EpicMinEffortPoints']
+        else:
+            AnchorWgt_default = 0
+            NonAnchorWgt_default = 0
+            MiscWgt_default = 0
+            AnchorMaxPoints_default = 0
+            NonAnchorMaxPoints_default = 0
+            EpicMinEffortPoints_default = 0
+        with mcol1:
             # Create the form inside a div with the custom class
-            with mcol2:
-            #  st.write("Project Forecast")
-                df = fetch_data_from_db("Projects")
-                df = df[["Title", "State", "Anchor_Project", "Priority_Traffic_Ops","Fiscal_Year","Funding_Source","Route_Type","Scoping_30_Percent","SeventyFivePercentComplete","Intermediate_Date","QAQC_Submittal_Date","Document_Submittal_Date"]]
-        
-
-
-
-                tabs = st.tabs(["Projects"])
-            
-                with tabs[0]:
-
-                    anchor_project_df, non_anchor_project_df,projects_display_df = du.get_project_data()
-                    upcoming_sprint_data = du.get_upcoming_sprints_with_effortpoints_and_weightage()
-                    allocation,anchor_projects_df,non_anchor_projects_df = du.distribute_epics_to_sprints(anchor_project_df, non_anchor_project_df, upcoming_sprint_data)
-                    #st.write(allocation)
-                    df = st.session_state.updated_forecast_df = allocation
-                    #st.dataframe(st.session_state.updated_forecast_df,    hide_index=True, on_select="rerun")
-                    # Display the dataframe with single-column selection enabled
-                    selection_event = st.dataframe(
-                        df,
-                        selection_mode="single-column",
-                        on_select="rerun",
-                        use_container_width=True,
-                        hide_index=True
-                    )
-
-                # Prepare an empty list to collect project details
-                    project_details = []
-
-                    # Check if a column is selected
-                    if selection_event and selection_event.selection.get('columns'):
-                        selected_column = selection_event.selection['columns'][0]
+            with st.form(key='config_form'):
+                st.markdown('<div class="custom-form">', unsafe_allow_html=True)
+                #st.write("Project Weightage")
+                with st.container():
+                    with st.popover("Type Weights"):
+                    # Input fields will be stacked vertically inside the container
+                        MiscWgt = st.number_input("Miscellaneous Weight %", min_value=0, value=MiscWgt_default,step=1, format="%d")
+                        AnchorWgt = st.number_input("Anchor Weight %", min_value=0, value=AnchorWgt_default, step=1, format="%d")
+                        NonAnchorWgt = st.number_input("Non-Anchor Weight %", min_value=0, value=(100-AnchorWgt), step=1, format="%d", disabled=True)
+                    st.divider()
+                    with st.popover("Max Points "):                     
+                        AnchorMaxPoints = st.number_input("Anchor Max Effort Points", min_value=0,  value=AnchorMaxPoints_default,  step=1, format="%d")
+                        NonAnchorMaxPoints = st.number_input("Non-Anchor Effort Max Points", min_value=0, value=NonAnchorMaxPoints_default , step=1, format="%d")
+                    st.divider()
+                    with st.popover("Min Points "):   
+                        EpicMinEffortPoints = st.number_input("Epic Min Effort Points", min_value=0,value=EpicMinEffortPoints_default, step=1, format="%d")
+                    
+                    # Submit button at the end
+                    st.divider()
+                    submit_button = st.form_submit_button(label="Forecast")
+                    st.markdown('</div>', unsafe_allow_html=True)
+                    if submit_button:
+                        add_config_to_db(AnchorWgt, NonAnchorWgt, MiscWgt, AnchorMaxPoints, NonAnchorMaxPoints, EpicMinEffortPoints)
+                    # Recompute the updated forecast data based on the new configuration
+                        anchor_project_df, non_anchor_project_df,projects_display_df = du.get_project_data()
                         
-                        # Iterate over selected column values
-                        for index, value in df[selected_column].items():
-                            # Extract ID and type (A for Anchor, NA for Non-Anchor) from the column value
-                            if isinstance(value, str):
-                                # Parse `value` for project ID, A/NA designation, epic title, and effort points
-                                try:
-                                    project_id = int(value.split()[0])  # Extract project ID
-                                    designation = value.split("(")[1].split(")")[0]  # Extract "A" or "NA"
-                                    epic_title = value.split(" - ")[1].split(" (")[0]  # Extract epic title
+                        upcoming_sprint_data = du.get_upcoming_sprints_with_effortpoints_and_weightage()
 
-                                    # Select the relevant DataFrame based on designation
-                                    relevant_df = anchor_projects_df if designation == "A" else non_anchor_projects_df
-                                    
-                                    # Filter the relevant DataFrame for the selected project ID and Epic Title
-                                    project_info = relevant_df[
-                                        (relevant_df['projects_Work_Item_ID'] == project_id) &
-                                        (relevant_df['epics_System_Title'] == epic_title)
-                                    ]
-                                    print(project_info)
-                                    # Append project details to the list if found
-                                    if not project_info.empty:
-                                        project_details.append({
-                                            "Project ID": project_info['projects_Work_Item_ID'].values[0],
-                                            "Project Title": project_info['projects_Title'].values[0],
-                                            "Epic ID": project_info['epics_System_Id'].values[0],
-                                            "Epic Title": project_info['epics_System_Title'].values[0],
-                                            "Total Effort Points": project_info['total_effort_from_pbis'].values[0],
-                                            "Nearest Due Date": project_info['nearest_doc_date'].values[0],
-                                            "Sprint": selected_column
-                                        })
-                                except (IndexError, ValueError):
-                                    st.write("Error parsing value:", value)
-                                    continue
-                    # Convert the list to a DataFrame
-                    if project_details:
-                        details_df = pd.DataFrame(project_details)
-                        st.session_state['selected_project_details'] = details_df 
-                        
+                        # Update session state with new forecast data for projects
+                        st.session_state.updated_forecast_df = du.distribute_epics_to_sprints(anchor_project_df, non_anchor_project_df, upcoming_sprint_data)
+                        # st.rerun()
+                        # st.toast("Forecast updated successfully!")
+        # Create the form inside a div with the custom class
+        with mcol2:
+        #  st.write("Project Forecast")
+            df = fetch_data_from_db("Projects")
+            df = df[["Title", "State", "Anchor_Project", "Priority_Traffic_Ops","Fiscal_Year","Funding_Source","Route_Type","Scoping_30_Percent","SeventyFivePercentComplete","Intermediate_Date","QAQC_Submittal_Date","Document_Submittal_Date"]]
+    
+
+
+
+            tabs = st.tabs(["Projects"])
         
-          
+            with tabs[0]:
+
+                anchor_project_df, non_anchor_project_df,projects_display_df = du.get_project_data()
+                upcoming_sprint_data = du.get_upcoming_sprints_with_effortpoints_and_weightage()
+                allocation,anchor_projects_df,non_anchor_projects_df = du.distribute_epics_to_sprints(anchor_project_df, non_anchor_project_df, upcoming_sprint_data)
+                #st.write(allocation)
+                df = st.session_state.updated_forecast_df = allocation
+                #st.dataframe(st.session_state.updated_forecast_df,    hide_index=True, on_select="rerun")
+                # Display the dataframe with single-column selection enabled
+                selection_event = st.dataframe(
+                    df,
+                    selection_mode="single-column",
+                    on_select="rerun",
+                    use_container_width=True,
+                    hide_index=True
+                )
+
+            # Prepare an empty list to collect project details
+                project_details = []
+
+                # Check if a column is selected
+                if selection_event and selection_event.selection.get('columns'):
+                    selected_column = selection_event.selection['columns'][0]
+                    
+                    # Iterate over selected column values
+                    for index, value in df[selected_column].items():
+                        # Extract ID and type (A for Anchor, NA for Non-Anchor) from the column value
+                        if isinstance(value, str):
+                            # Parse `value` for project ID, A/NA designation, epic title, and effort points
+                            try:
+                                project_id = int(value.split()[0])  # Extract project ID
+                                designation = value.split("(")[1].split(")")[0]  # Extract "A" or "NA"
+                                epic_title = value.split(" - ")[1].split(" (")[0]  # Extract epic title
+
+                                # Select the relevant DataFrame based on designation
+                                relevant_df = anchor_projects_df if designation == "A" else non_anchor_projects_df
+                                
+                                # Filter the relevant DataFrame for the selected project ID and Epic Title
+                                project_info = relevant_df[
+                                    (relevant_df['projects_Work_Item_ID'] == project_id) &
+                                    (relevant_df['epics_System_Title'] == epic_title)
+                                ]
+                                print(project_info)
+                                # Append project details to the list if found
+                                if not project_info.empty:
+                                    project_details.append({
+                                        "Project ID": project_info['projects_Work_Item_ID'].values[0],
+                                        "Project Title": project_info['projects_Title'].values[0],
+                                        "Epic ID": project_info['epics_System_Id'].values[0],
+                                        "Epic Title": project_info['epics_System_Title'].values[0],
+                                        "Total Effort Points": project_info['total_effort_from_pbis'].values[0],
+                                        "Nearest Due Date": project_info['nearest_doc_date'].values[0],
+                                        "Sprint": selected_column
+                                    })
+                            except (IndexError, ValueError):
+                                st.write("Error parsing value:", value)
+                                continue
+                # Convert the list to a DataFrame
+                if project_details:
+                    details_df = pd.DataFrame(project_details)
+                    st.session_state['selected_project_details'] = details_df 
+                    
+    
         
+    
+    
+        st.write("Epic status")
+        if not st.session_state['selected_project_details'].empty:
+            print(st.session_state['selected_project_details'])
+            # Convert 'nearest_due_date' column to datetime and format as MM/DD/YYYY
+            st.session_state['selected_project_details']['Nearest Due Date'] = pd.to_datetime(st.session_state['selected_project_details']['Nearest Due Date'], errors='coerce')
+            st.session_state['selected_project_details']['Nearest Due Date'] = st.session_state['selected_project_details']['Nearest Due Date'].dt.strftime('%m/%d/%Y')
+
+    
+            st.session_state['selected_project_details']['Project ID'] = st.session_state['selected_project_details']['Project ID'].astype(int)
+            st.dataframe(st.session_state['selected_project_details'].style.format({"Project ID": "{:.0f}", 'Total Effort Points': "{}"}), hide_index=True) 
+        # st.write(anchor_project_df)
+        # st.write("non-anchor")
+        # st.write(non_anchor_project_df)
+    
+        # st.write("Sprint Allocation")
+        # st.write(allocation)
+        st.write("Upcoming Sprint Data")
+
+        # Convert 'Start_date' and 'End_date' to US date format
+        upcoming_sprint_data['Start_date'] = pd.to_datetime(upcoming_sprint_data['Start_date'], errors='coerce').dt.strftime('%m/%d/%Y')
+        upcoming_sprint_data['End_date'] = pd.to_datetime(upcoming_sprint_data['End_date'], errors='coerce').dt.strftime('%m/%d/%Y')
+
+        st.dataframe(upcoming_sprint_data, hide_index=True) 
+        st.write("Anchor")
+        anchor_projects_df['projects_Fiscal_Year'] = pd.to_numeric(anchor_projects_df['projects_Fiscal_Year'], errors='coerce').fillna(0).astype(int)
+        anchor_projects_df['projects_Priority_Traffic_Ops'] = pd.to_numeric(anchor_projects_df['projects_Priority_Traffic_Ops'], errors='coerce').fillna(0).astype(int)
+        anchor_projects_df['projects_Construction_EA_Number'] = pd.to_numeric(anchor_projects_df['projects_Construction_EA_Number'], errors='coerce').fillna(0).astype(int)
+        anchor_projects_df['projects_Work_Item_ID'] = pd.to_numeric(anchor_projects_df['projects_Work_Item_ID'], errors='coerce').fillna(0).astype(int)
+        anchor_projects_df['epics_System_Id'] = pd.to_numeric(anchor_projects_df['epics_System_Id'], errors='coerce').fillna(0).astype(int)
+        anchor_projects_df['projects_Anchor_Project'] = pd.to_numeric(anchor_projects_df['projects_Anchor_Project'], errors='coerce').fillna(0).astype(int)
+        anchor_projects_df['projects_Complexity_Signals'] = pd.to_numeric(anchor_projects_df['projects_Complexity_Signals'], errors='coerce').fillna(0).astype(int)
+        anchor_projects_df['projects_Complexity_Lighting'] = pd.to_numeric(anchor_projects_df['projects_Complexity_Lighting'], errors='coerce').fillna(0).astype(int)
+        anchor_projects_df['projects_Complexity_ITS'] = pd.to_numeric(anchor_projects_df['projects_Complexity_ITS'], errors='coerce').fillna(0).astype(int)
+        anchor_projects_df['projects_Complexity_Power_Design'] = pd.to_numeric(anchor_projects_df['projects_Complexity_Power_Design'], errors='coerce').fillna(0).astype(int)
+        anchor_projects_df['projects_Complexity_RoW_Coordination'] = pd.to_numeric(anchor_projects_df['projects_Complexity_RoW_Coordination'], errors='coerce').fillna(0).astype(int)
+        anchor_projects_df['projects_Complexity_SLI_Project_Lead'] = pd.to_numeric(anchor_projects_df['projects_Complexity_SLI_Project_Lead'], errors='coerce').fillna(0).astype(int)
+        anchor_projects_df['projects_Complexity_Solar_Design'] = pd.to_numeric(anchor_projects_df['projects_Complexity_Solar_Design'], errors='coerce').fillna(0).astype(int)
+        anchor_projects_df['projects_Complexity_Trunkline'] = pd.to_numeric(anchor_projects_df['projects_Complexity_Trunkline'], errors='coerce').fillna(0).astype(int)
+        anchor_projects_df['projects_complexity'] = pd.to_numeric(anchor_projects_df['projects_complexity'], errors='coerce').fillna(0).astype(int)
         
-            st.write("Epic status")
-            if not st.session_state['selected_project_details'].empty:
-                print(st.session_state['selected_project_details'])
-                # Convert 'nearest_due_date' column to datetime and format as MM/DD/YYYY
-                st.session_state['selected_project_details']['Nearest Due Date'] = pd.to_datetime(st.session_state['selected_project_details']['Nearest Due Date'], errors='coerce')
-                st.session_state['selected_project_details']['Nearest Due Date'] = st.session_state['selected_project_details']['Nearest Due Date'].dt.strftime('%m/%d/%Y')
-
-      
-                st.session_state['selected_project_details']['Project ID'] = st.session_state['selected_project_details']['Project ID'].astype(int)
-                st.dataframe(st.session_state['selected_project_details'].style.format({"Project ID": "{:.0f}", 'Total Effort Points': "{}"}), hide_index=True) 
-            # st.write(anchor_project_df)
-            # st.write("non-anchor")
-            # st.write(non_anchor_project_df)
+        # Update the formatting dictionary with your actual column names
+        format_dict = {
+            'total_effort_from_pbis': '{}', 
+            'nearest_doc_date': lambda x: pd.to_datetime(x).strftime('%m/%d/%Y') if pd.notnull(x) else '',
+            'projects_Scoping_30_Percent': lambda x: pd.to_datetime(x).strftime('%m/%d/%Y') if pd.notnull(x) else '',
+            'projects_SeventyFivePercentComplete': lambda x: pd.to_datetime(x).strftime('%m/%d/%Y') if pd.notnull(x) else '',
+            'projects_Intermediate_Date': lambda x: pd.to_datetime(x).strftime('%m/%d/%Y') if pd.notnull(x) else '',
+            'projects_QAQC_Submittal_Date': lambda x: pd.to_datetime(x).strftime('%m/%d/%Y') if pd.notnull(x) else '',
+            'projects_Document_Submittal_Date': lambda x: pd.to_datetime(x).strftime('%m/%d/%Y') if pd.notnull(x) else '',
+            'projects_Official_DOC_Date': lambda x: pd.to_datetime(x).strftime('%m/%d/%Y') if pd.notnull(x) else ''
+        }
         
-            # st.write("Sprint Allocation")
-            # st.write(allocation)
-            st.write("Upcoming Sprint Data")
+        # Apply styling to format columns
+        styled_anchor_df = anchor_projects_df.style.format(format_dict)
 
-            # Convert 'Start_date' and 'End_date' to US date format
-            upcoming_sprint_data['Start_date'] = pd.to_datetime(upcoming_sprint_data['Start_date'], errors='coerce').dt.strftime('%m/%d/%Y')
-            upcoming_sprint_data['End_date'] = pd.to_datetime(upcoming_sprint_data['End_date'], errors='coerce').dt.strftime('%m/%d/%Y')
+        st.dataframe(styled_anchor_df, hide_index=True)
+        st.write("Non Anchor")
+        non_anchor_projects_df['projects_Fiscal_Year'] = pd.to_numeric(non_anchor_projects_df['projects_Fiscal_Year'], errors='coerce').fillna(0).astype(int)
+        non_anchor_projects_df['projects_Priority_Traffic_Ops'] = pd.to_numeric(non_anchor_projects_df['projects_Priority_Traffic_Ops'], errors='coerce').fillna(0).astype(int)
+        non_anchor_projects_df['projects_Construction_EA_Number'] = pd.to_numeric(non_anchor_projects_df['projects_Construction_EA_Number'], errors='coerce').fillna(0).astype(int)
+        non_anchor_projects_df['projects_Work_Item_ID'] = pd.to_numeric(non_anchor_projects_df['projects_Work_Item_ID'], errors='coerce').fillna(0).astype(int)
+        non_anchor_projects_df['epics_System_Id'] = pd.to_numeric(non_anchor_projects_df['epics_System_Id'], errors='coerce').fillna(0).astype(int)
+        non_anchor_projects_df['projects_Anchor_Project'] = pd.to_numeric(non_anchor_projects_df['projects_Anchor_Project'], errors='coerce').fillna(0).astype(int)
+        non_anchor_projects_df['projects_Complexity_Signals'] = pd.to_numeric(non_anchor_projects_df['projects_Complexity_Signals'], errors='coerce').fillna(0).astype(int)
+        non_anchor_projects_df['projects_Complexity_Lighting'] = pd.to_numeric(non_anchor_projects_df['projects_Complexity_Lighting'], errors='coerce').fillna(0).astype(int)
+        non_anchor_projects_df['projects_Complexity_ITS'] = pd.to_numeric(non_anchor_projects_df['projects_Complexity_ITS'], errors='coerce').fillna(0).astype(int)
+        non_anchor_projects_df['projects_Complexity_Power_Design'] = pd.to_numeric(non_anchor_projects_df['projects_Complexity_Power_Design'], errors='coerce').fillna(0).astype(int)
+        non_anchor_projects_df['projects_Complexity_RoW_Coordination'] = pd.to_numeric(non_anchor_projects_df['projects_Complexity_RoW_Coordination'], errors='coerce').fillna(0).astype(int)
+        non_anchor_projects_df['projects_Complexity_SLI_Project_Lead'] = pd.to_numeric(non_anchor_projects_df['projects_Complexity_SLI_Project_Lead'], errors='coerce').fillna(0).astype(int)
+        non_anchor_projects_df['projects_Complexity_Solar_Design'] = pd.to_numeric(non_anchor_projects_df['projects_Complexity_Solar_Design'], errors='coerce').fillna(0).astype(int)
+        non_anchor_projects_df['projects_Complexity_Trunkline'] = pd.to_numeric(non_anchor_projects_df['projects_Complexity_Trunkline'], errors='coerce').fillna(0).astype(int)
+        non_anchor_projects_df['projects_complexity'] = pd.to_numeric(non_anchor_projects_df['projects_complexity'], errors='coerce').fillna(0).astype(int)
+        
 
-            st.dataframe(upcoming_sprint_data, hide_index=True) 
-            st.write("Anchor")
-            anchor_projects_df['projects_Fiscal_Year'] = pd.to_numeric(anchor_projects_df['projects_Fiscal_Year'], errors='coerce').fillna(0).astype(int)
-            anchor_projects_df['projects_Priority_Traffic_Ops'] = pd.to_numeric(anchor_projects_df['projects_Priority_Traffic_Ops'], errors='coerce').fillna(0).astype(int)
-            anchor_projects_df['projects_Construction_EA_Number'] = pd.to_numeric(anchor_projects_df['projects_Construction_EA_Number'], errors='coerce').fillna(0).astype(int)
-
-            # Update the formatting dictionary with your actual column names
-            format_dict = {
-                'projects_Work_Item_ID': '{}',      # Display without commas for project work item ID
-                'epics_System_Id': '{}', 
-                'total_effort_from_pbis': '{}',              # Display without commas for epic system ID
-                'nearest_doc_date': lambda x: pd.to_datetime(x).strftime('%m/%d/%Y') if pd.notnull(x) else '',
-                'projects_Scoping_30_Percent': lambda x: pd.to_datetime(x).strftime('%m/%d/%Y') if pd.notnull(x) else '',
-                'projects_SeventyFivePercentComplete': lambda x: pd.to_datetime(x).strftime('%m/%d/%Y') if pd.notnull(x) else '',
-                'projects_Intermediate_Date': lambda x: pd.to_datetime(x).strftime('%m/%d/%Y') if pd.notnull(x) else '',
-                'projects_QAQC_Submittal_Date': lambda x: pd.to_datetime(x).strftime('%m/%d/%Y') if pd.notnull(x) else '',
-                'projects_Document_Submittal_Date': lambda x: pd.to_datetime(x).strftime('%m/%d/%Y') if pd.notnull(x) else '',
-                'projects_Official_DOC_Date': lambda x: pd.to_datetime(x).strftime('%m/%d/%Y') if pd.notnull(x) else ''
-
-
-            }
-           
             # Apply styling to format columns
-            styled_anchor_df = anchor_projects_df.style.format(format_dict)
+        styled_non_anchor_df = non_anchor_project_df.style.format(format_dict)
+        st.dataframe(styled_non_anchor_df, hide_index=True)
+        st.write("Data from Azure devops")
+        # st.button("Refresh")
 
-            st.dataframe(styled_anchor_df, hide_index=True)
-            st.write("Non Anchor")
-             # Apply styling to format columns
-            styled_non_anchor_df = non_anchor_project_df.style.format(format_dict)
-            st.dataframe(styled_non_anchor_df, hide_index=True)
-            st.write("Data from Azure devops")
-            # Columns to filter in the final DataFrame
-            columns_to_keep = [
-                "Work_Item_ID", "State", "Title", "EA_Number", "Anchor_Project", 
-                "Complexity_Signals", "Complexity_Lighting", "Complexity_ITS", "Complexity_Power_Design",
-                "Complexity_RoW_Coordination", "Complexity_SLI_Project_Lead", "Complexity_Solar_Design", 
-                "Complexity_Trunkline", "Official_DOC_Date", "Priority_Traffic_Ops", "Fiscal_Year", 
-                "Funding_Source", "Route_Type"
-            ]
+        # Columns to filter in the final DataFrame
+        columns_to_keep = [
+            "Work_Item_ID",  "Title", "EA_Number", "Anchor_Project", "State", "Funding_Source", "Fiscal_Year", 
+            "Official_DOC_Date", "Priority_Traffic_Ops", 
+                "Route_Type",
+            "Complexity_Signals", "Complexity_Lighting", "Complexity_ITS", "Complexity_Power_Design",
+            "Complexity_RoW_Coordination", "Complexity_SLI_Project_Lead", "Complexity_Solar_Design", 
+            "Complexity_Trunkline"
+        ]
 
-            # Filter the DataFrame to include only specified columns
-            filtered_data = projects_display_df[columns_to_keep]
+        # Filter the DataFrame to include only specified columns
+        filtered_data = projects_display_df[columns_to_keep]
 
-            # Define columns to replace 0/1 with "No"/"Yes"
-            columns_to_replace = [
-                "Anchor_Project", "Complexity_Signals", "Complexity_Lighting", "Complexity_ITS", 
-                "Complexity_Power_Design", "Complexity_RoW_Coordination", "Complexity_SLI_Project_Lead", 
-                "Complexity_Solar_Design", "Complexity_Trunkline"
-            ]
+        # Define columns to replace 0/1 with "No"/"Yes"
+        columns_to_replace = [
+            "Anchor_Project", "Complexity_Signals", "Complexity_Lighting", "Complexity_ITS", 
+            "Complexity_Power_Design", "Complexity_RoW_Coordination", "Complexity_SLI_Project_Lead", 
+            "Complexity_Solar_Design", "Complexity_Trunkline"
+        ]
 
-            # Replace 0 with "No" and 1 with "Yes" in the specified columns
-            filtered_data[columns_to_replace] = filtered_data[columns_to_replace].replace({0: "No", 1: "Yes"})
+        # Replace 0 with "No" and 1 with "Yes" in the specified columns
+        filtered_data[columns_to_replace] = filtered_data[columns_to_replace].replace({0: "No", 1: "Yes"})
 
-            # Define columns to replace values based on presence
-            columns_to_check = [
-                "Official_DOC_Date", "Priority_Traffic_Ops", "Fiscal_Year", 
-                "Funding_Source", "Route_Type"
-            ]
+        # Define columns to replace values based on presence
+        columns_to_check = [
+            "Official_DOC_Date", "Priority_Traffic_Ops", "Fiscal_Year", 
+            "Funding_Source", "Route_Type"
+        ]
 
-            # Replace values based on presence (non-NaN -> "Yes", NaN -> "No")
-            filtered_data[columns_to_check] = filtered_data[columns_to_check].notna().replace({True: "Yes", False: "No"})
-
-            format_project_display_dict = {
-                'Work_Item_ID': '{}'
-            }
-               # Apply styling to format columns
-            styled_filtered_data_df = filtered_data.style.format(format_project_display_dict)
-            st.dataframe(styled_filtered_data_df, hide_index=True)
+        # Replace values based on presence (non-NaN -> "Yes", NaN -> "No")
+        filtered_data[columns_to_check] = filtered_data[columns_to_check].notna().replace({True: "Yes", False: "No"})
+        format_project_display_dict = {
+            'Work_Item_ID': '{}'
+        }
+            # Apply styling to format columns
+        styled_filtered_data_df = filtered_data.style.format(format_project_display_dict)
+        st.dataframe(styled_filtered_data_df, hide_index=True)
 
     elif st.session_state.page == 'Dashboard':
         st.title("Dashboard")
