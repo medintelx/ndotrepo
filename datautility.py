@@ -350,9 +350,12 @@ def distribute_epics_to_sprints(anchor_projects_df, non_anchor_projects_df, upco
 
             # Filter relevant sprints based on the nearest due date
             sprints = upcoming_sprints_df.copy()
-            sprints['Start_date'] = pd.to_datetime(sprints['Start_date'])
+            sprints['Start_date'] = pd.to_datetime(sprints['Start_date'], errors='coerce').dt.tz_localize(None)
 
             if nearest_due_date is not None:
+                nearest_due_date = pd.to_datetime(nearest_due_date).tz_localize(None)
+                print(type(sprints['Start_date']))
+                print(type(nearest_due_date))
                 sprints = sprints[sprints['Start_date'] <= nearest_due_date]
 
             # Calculate average effort per sprint and check against minimumEpicPoints
