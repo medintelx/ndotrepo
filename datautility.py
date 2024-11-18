@@ -265,9 +265,10 @@ def distribute_epics_to_sprints(anchor_projects_df, non_anchor_projects_df, upco
 
     # Function to allocate effort for a set of projects (either anchor or non-anchor)
     def allocate_projects(projects_df, project_type):
-        print(projects_df)
         max_effort_per_sprint_column = 'MaxAnchorEffortPointspersprint' if project_type == 'anchor' else 'MaxNonAnchorEffortPointspersprint'
         for _, epic in projects_df.iterrows():
+            print(epic["epics_System_Title"])
+            print(epic["nearest_doc_date"])
             remaining_effort = epic['total_effort_from_pbis']
             nearest_due_date = pd.to_datetime(epic['nearest_doc_date']) if not pd.isnull(epic['nearest_doc_date']) else None
          
@@ -275,9 +276,7 @@ def distribute_epics_to_sprints(anchor_projects_df, non_anchor_projects_df, upco
             sprints = upcoming_sprints_df.copy()
             sprints['overdue'] = False  # Flag for overdue efforts
             if nearest_due_date is not None:
-                print("Start_date dtype:", sprints['Start_date'].dtype)
-                print("nearest_due_date dtype:", type(nearest_due_date))# <--- This line   
-                print("Pandas Version:", pd.__version__)         
+        
                 sprints.loc[sprints['Start_date'] > nearest_due_date, 'overdue'] = True
                
             # Calculate average effort per sprint and check against minimumEpicPoints
@@ -316,7 +315,7 @@ def distribute_epics_to_sprints(anchor_projects_df, non_anchor_projects_df, upco
                      
                     # Update capacities and remaining effort
                     sprint_allocations[sprint_name][f'remaining_{project_type}_effort'] -= allocated_effort
-                    print(sprint_allocations)
+                  
                     remaining_effort -= allocated_effort
 
                 if remaining_effort <= 0:
@@ -338,7 +337,7 @@ def distribute_epics_to_sprints(anchor_projects_df, non_anchor_projects_df, upco
     
     # Create DataFrame and pivot it so that each sprint is a column with combined efforts in each cell
     allocations_df = pd.DataFrame(allocation_results)
-    print(allocations_df)
+
     sprint_order = upcoming_sprints_df['Iteration'].tolist()
     pivot_df = allocations_df.pivot(columns='Sprint', values='Effort').reindex(columns=sprint_order).reset_index(drop=True)
     df_uniform = pivot_df.apply(lambda x: pd.Series(x.dropna().values), axis=0)
@@ -588,7 +587,7 @@ def get_upcoming_sprints_with_effortpoints_and_weightage():
         df.at[i, 'minimumEpicPoints'] = epicMinEffortPoints
 
     # Close the connection
-    print(df.to_excel("sample.xlsx"))
+   
     conn.close()
     
     return df
