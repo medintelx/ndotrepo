@@ -322,6 +322,8 @@ def distribute_epics_to_sprints(anchor_projects_df, non_anchor_projects_df, upco
                     break
    
     # Allocate efforts for anchor and non-anchor projects separately
+    anchor_projects_df['nearest_doc_date'] = anchor_projects_df['nearest_doc_date'].fillna(pd.Timestamp.max) 
+    non_anchor_projects_df['nearest_doc_date'] = non_anchor_projects_df['nearest_doc_date'].fillna(pd.Timestamp.max) 
     allocate_projects(anchor_projects_df, 'anchor')
     allocate_projects(non_anchor_projects_df, 'non_anchor')
 
