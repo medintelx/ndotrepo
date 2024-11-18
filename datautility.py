@@ -293,7 +293,10 @@ def distribute_epics_to_sprints(anchor_projects_df, non_anchor_projects_df, upco
                     if avg_effort_from_here >= minimum_epic_points:
                         sprints = sprints.iloc[idx:]
                         break
-
+            if _==0:
+                print(epic["epics_System_Title"])
+                print(epic["nearest_doc_date"])
+                print(sprints)
             # Sort sprints by start date to allocate sequentially
             #sprints = sprints.sort_values(by=['overdue', 'Start_date'])
             
