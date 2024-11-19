@@ -866,7 +866,22 @@ def main_application():
             'projects_Intermediate_Date': lambda x: pd.to_datetime(x).strftime('%m/%d/%Y') if pd.notnull(x) else '',
             'projects_QAQC_Submittal_Date': lambda x: pd.to_datetime(x).strftime('%m/%d/%Y') if pd.notnull(x) else '',
             'projects_Document_Submittal_Date': lambda x: pd.to_datetime(x).strftime('%m/%d/%Y') if pd.notnull(x) else '',
-            'projects_Official_DOC_Date': lambda x: pd.to_datetime(x).strftime('%m/%d/%Y') if pd.notnull(x) else ''
+            'projects_Official_DOC_Date': lambda x: pd.to_datetime(x).strftime('%m/%d/%Y') if pd.notnull(x) else '',
+            'projects_Fiscal_Year': '{:.0f}',
+    'projects_Priority_Traffic_Ops': '{:.0f}',
+    'projects_Construction_EA_Number': '{:.0f}',
+    'projects_Work_Item_ID': '{:.0f}',
+    'epics_System_Id': '{:.0f}',
+    'projects_Anchor_Project': '{:.0f}',
+    'projects_Complexity_Signals': '{:.0f}',
+    'projects_Complexity_Lighting': '{:.0f}',
+    'projects_Complexity_ITS': '{:.0f}',
+    'projects_Complexity_Power_Design': '{:.0f}',
+    'projects_Complexity_RoW_Coordination': '{:.0f}',
+    'projects_Complexity_SLI_Project_Lead': '{:.0f}',
+    'projects_Complexity_Solar_Design': '{:.0f}',
+    'projects_Complexity_Trunkline': '{:.0f}',
+    'projects_complexity': '{:.0f}'
         }
         
         # Apply styling to format columns
