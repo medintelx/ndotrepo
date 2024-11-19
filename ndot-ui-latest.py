@@ -4,18 +4,13 @@ import pandas as pd
 from datetime import datetime
 from dotenv import load_dotenv
 import os
-import plotly.graph_objects as go
-import pandas as pd
-from st_material_table import st_material_table
 import calendar
 from streamlit_modal import Modal
-from st_aggrid import AgGrid, GridOptionsBuilder, AgGridTheme, JsCode
-import pandas as pd
+from st_aggrid import AgGrid, GridOptionsBuilder, AgGridTheme
 import datautility as du
-from dotenv import load_dotenv
 from st_aggrid.shared import GridUpdateMode
 load_dotenv()
-import logging
+#import logging
 
 #DB_PATH = os.getenv('DB_PATH')
 DB_PATH = 'NDOTDATA.db'
@@ -842,12 +837,22 @@ def main_application():
             anchor_projects_df['projects_Fiscal_Year'] = pd.to_numeric(anchor_projects_df['projects_Fiscal_Year'], errors='coerce').fillna(0).astype(int)
             anchor_projects_df['projects_Priority_Traffic_Ops'] = pd.to_numeric(anchor_projects_df['projects_Priority_Traffic_Ops'], errors='coerce').fillna(0).astype(int)
             anchor_projects_df['projects_Construction_EA_Number'] = pd.to_numeric(anchor_projects_df['projects_Construction_EA_Number'], errors='coerce').fillna(0).astype(int)
-
+            anchor_projects_df['projects_Work_Item_ID'] = pd.to_numeric(anchor_projects_df['projects_Work_Item_ID'], errors='coerce').fillna(0).astype(int)
+            anchor_projects_df['epics_System_Id'] = pd.to_numeric(anchor_projects_df['epics_System_Id'], errors='coerce').fillna(0).astype(int)
+            anchor_projects_df['projects_Anchor_Project'] = pd.to_numeric(anchor_projects_df['projects_Anchor_Project'], errors='coerce').fillna(0).astype(int)
+            anchor_projects_df['projects_Complexity_Signals'] = pd.to_numeric(anchor_projects_df['projects_Complexity_Signals'], errors='coerce').fillna(0).astype(int)
+            anchor_projects_df['projects_Complexity_Lighting'] = pd.to_numeric(anchor_projects_df['projects_Complexity_Lighting'], errors='coerce').fillna(0).astype(int)
+            anchor_projects_df['projects_Complexity_ITS'] = pd.to_numeric(anchor_projects_df['projects_Complexity_ITS'], errors='coerce').fillna(0).astype(int)
+            anchor_projects_df['projects_Complexity_Power_Design'] = pd.to_numeric(anchor_projects_df['projects_Complexity_Power_Design'], errors='coerce').fillna(0).astype(int)
+            anchor_projects_df['projects_Complexity_RoW_Coordination'] = pd.to_numeric(anchor_projects_df['projects_Complexity_RoW_Coordination'], errors='coerce').fillna(0).astype(int)
+            anchor_projects_df['projects_Complexity_SLI_Project_Lead'] = pd.to_numeric(anchor_projects_df['projects_Complexity_SLI_Project_Lead'], errors='coerce').fillna(0).astype(int)
+            anchor_projects_df['projects_Complexity_Solar_Design'] = pd.to_numeric(anchor_projects_df['projects_Complexity_Solar_Design'], errors='coerce').fillna(0).astype(int)
+            anchor_projects_df['projects_Complexity_Trunkline'] = pd.to_numeric(anchor_projects_df['projects_Complexity_Trunkline'], errors='coerce').fillna(0).astype(int)
+            anchor_projects_df['projects_complexity'] = pd.to_numeric(anchor_projects_df['projects_complexity'], errors='coerce').fillna(0).astype(int)
+            
             # Update the formatting dictionary with your actual column names
             format_dict = {
-                'projects_Work_Item_ID': '{}',      # Display without commas for project work item ID
-                'epics_System_Id': '{}', 
-                'total_effort_from_pbis': '{}',              # Display without commas for epic system ID
+                'total_effort_from_pbis': '{}', 
                 'nearest_doc_date': lambda x: pd.to_datetime(x).strftime('%m/%d/%Y') if pd.notnull(x) else '',
                 'projects_Scoping_30_Percent': lambda x: pd.to_datetime(x).strftime('%m/%d/%Y') if pd.notnull(x) else '',
                 'projects_SeventyFivePercentComplete': lambda x: pd.to_datetime(x).strftime('%m/%d/%Y') if pd.notnull(x) else '',
@@ -855,16 +860,31 @@ def main_application():
                 'projects_QAQC_Submittal_Date': lambda x: pd.to_datetime(x).strftime('%m/%d/%Y') if pd.notnull(x) else '',
                 'projects_Document_Submittal_Date': lambda x: pd.to_datetime(x).strftime('%m/%d/%Y') if pd.notnull(x) else '',
                 'projects_Official_DOC_Date': lambda x: pd.to_datetime(x).strftime('%m/%d/%Y') if pd.notnull(x) else ''
-
-
             }
-           
+            
             # Apply styling to format columns
             styled_anchor_df = anchor_projects_df.style.format(format_dict)
 
             st.dataframe(styled_anchor_df, hide_index=True)
             st.write("Non Anchor")
-             # Apply styling to format columns
+            non_anchor_projects_df['projects_Fiscal_Year'] = pd.to_numeric(non_anchor_projects_df['projects_Fiscal_Year'], errors='coerce').fillna(0).astype(int)
+            non_anchor_projects_df['projects_Priority_Traffic_Ops'] = pd.to_numeric(non_anchor_projects_df['projects_Priority_Traffic_Ops'], errors='coerce').fillna(0).astype(int)
+            non_anchor_projects_df['projects_Construction_EA_Number'] = pd.to_numeric(non_anchor_projects_df['projects_Construction_EA_Number'], errors='coerce').fillna(0).astype(int)
+            non_anchor_projects_df['projects_Work_Item_ID'] = pd.to_numeric(non_anchor_projects_df['projects_Work_Item_ID'], errors='coerce').fillna(0).astype(int)
+            non_anchor_projects_df['epics_System_Id'] = pd.to_numeric(non_anchor_projects_df['epics_System_Id'], errors='coerce').fillna(0).astype(int)
+            non_anchor_projects_df['projects_Anchor_Project'] = pd.to_numeric(non_anchor_projects_df['projects_Anchor_Project'], errors='coerce').fillna(0).astype(int)
+            non_anchor_projects_df['projects_Complexity_Signals'] = pd.to_numeric(non_anchor_projects_df['projects_Complexity_Signals'], errors='coerce').fillna(0).astype(int)
+            non_anchor_projects_df['projects_Complexity_Lighting'] = pd.to_numeric(non_anchor_projects_df['projects_Complexity_Lighting'], errors='coerce').fillna(0).astype(int)
+            non_anchor_projects_df['projects_Complexity_ITS'] = pd.to_numeric(non_anchor_projects_df['projects_Complexity_ITS'], errors='coerce').fillna(0).astype(int)
+            non_anchor_projects_df['projects_Complexity_Power_Design'] = pd.to_numeric(non_anchor_projects_df['projects_Complexity_Power_Design'], errors='coerce').fillna(0).astype(int)
+            non_anchor_projects_df['projects_Complexity_RoW_Coordination'] = pd.to_numeric(non_anchor_projects_df['projects_Complexity_RoW_Coordination'], errors='coerce').fillna(0).astype(int)
+            non_anchor_projects_df['projects_Complexity_SLI_Project_Lead'] = pd.to_numeric(non_anchor_projects_df['projects_Complexity_SLI_Project_Lead'], errors='coerce').fillna(0).astype(int)
+            non_anchor_projects_df['projects_Complexity_Solar_Design'] = pd.to_numeric(non_anchor_projects_df['projects_Complexity_Solar_Design'], errors='coerce').fillna(0).astype(int)
+            non_anchor_projects_df['projects_Complexity_Trunkline'] = pd.to_numeric(non_anchor_projects_df['projects_Complexity_Trunkline'], errors='coerce').fillna(0).astype(int)
+            non_anchor_projects_df['projects_complexity'] = pd.to_numeric(non_anchor_projects_df['projects_complexity'], errors='coerce').fillna(0).astype(int)
+            
+
+                # Apply styling to format columns
             styled_non_anchor_df = non_anchor_project_df.style.format(format_dict)
             st.dataframe(styled_non_anchor_df, hide_index=True)
 
