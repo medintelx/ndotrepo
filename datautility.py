@@ -519,7 +519,13 @@ def get_project_data():
 
     # Apply conditions using np.select
     aggregated_df['nearest_doc_date'] = np.select(conditions, choices, default=np.nan)
+    # Combine all conditions to create a filter mask
+    filter_mask = conditions[0]
+    for condition in conditions[1:]:
+        filter_mask |= condition
 
+    # Filter out rows where none of the conditions are met
+    aggregated_df = aggregated_df[filter_mask].copy()
     # Reorder columns with specified order first
     ordered_columns = ['projects_Work_Item_ID', 'epics_System_Id', 'epics_System_Title', 'total_effort_from_pbis'] + \
                       [col for col in aggregated_df.columns if col not in ['projects_Work_Item_ID', 'epics_System_Id', 'epics_System_Title', 'total_effort_from_pbis']]
