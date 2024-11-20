@@ -22,7 +22,7 @@ WORK_ITEMS_URL = f'https://dev.azure.com/{ORGANIZATION}/{PROJECT}/_apis/wit/work
 WORK_ITEMS_BATCH_URL = f"https://dev.azure.com/{ORGANIZATION}/_apis/wit/workitemsbatch?api-version=7.2-preview"
 
 # SQLite database setup
-DB_NAME = 'NDOTDATA.db'
+DB_NAME = 'NDOTDATA-dev.db'
 
 def init_db():
     conn = sqlite3.connect(DB_NAME)
@@ -31,7 +31,7 @@ def init_db():
     # Create table for Projects
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS projects (
-    Work_Item_ID INTEGER,
+    Work_Item_ID INTEGER PRIMARY KEY,
     Area_ID INTEGER,
     Area_Path TEXT,
     Team_Project TEXT,
@@ -81,7 +81,9 @@ def init_db():
     Complexity_RoW_Coordination BOOLEAN,
     Complexity_SLI_Project_Lead BOOLEAN,
     Complexity_Solar_Design BOOLEAN,
-    Complexity_Trunkline BOOLEAN
+    Complexity_Trunkline BOOLEAN,
+    Created_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    Modified_time DATETIME DEFAULT CURRENT_TIMESTAMP             
         )
     ''')
 
@@ -289,7 +291,7 @@ def fetch_work_item_details(ids, worditemtype):
     
 
 
-# Function to insert work items into the SQLite database table
+#Function to insert work items into the SQLite database table
 def insert_projects_into_db(data):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
@@ -301,24 +303,23 @@ def insert_projects_into_db(data):
 
 
 # Prepare the SQL insert statement with placeholders
-        sql_insert_statement = '''
-        INSERT INTO projects (
-        Work_Item_ID, Area_ID, Area_Path, Team_Project, Node_Name, Area_Level_1, Revision, 
-        Authorized_Date, Revised_Date, Iteration_ID, Iteration_Path, Iteration_Level_1, Work_Item_Type, 
-        State, Reason_for_State_Change, Assigned_To, Person_ID, Watermark, Comment_Count, 
-        Title, Board_Column, Is_Board_Column_Done, State_Change_Date, Business_Value, 
-        Backlog_Priority, Health, Scoping_30_Percent, Intermediate_Date, SeventyFivePercentComplete,QAQC_Submittal_Date, 
-        Document_Submittal_Date, Extension_Marker, Kanban_Column, Kanban_Column_Done, 
-        EA_Number, Priority_Traffic_Ops, Fiscal_Year, Funding_Source, Route_Type, 
-        Construction_EA_Number, Official_DOC_Date, Official_Advertise_Date, Anchor_Project, 
-        Complexity_Signals, Complexity_Lighting, Complexity_ITS, Complexity_Power_Design, 
-        Complexity_RoW_Coordination, Complexity_SLI_Project_Lead, Complexity_Solar_Design, 
-        Complexity_Trunkline
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-'''
+    sql_insert_statement = '''
+        INSERT OR REPLACE INTO projects (
+    Work_Item_ID, Area_ID, Area_Path, Team_Project, Node_Name, Area_Level_1, Revision, 
+    Authorized_Date, Revised_Date, Iteration_ID, Iteration_Path, Iteration_Level_1, Work_Item_Type, 
+    State, Reason_for_State_Change, Assigned_To, Person_ID, Watermark, Comment_Count, 
+    Title, Board_Column, Is_Board_Column_Done, State_Change_Date, Business_Value, 
+    Backlog_Priority, Health, Scoping_30_Percent, Intermediate_Date, SeventyFivePercentComplete, QAQC_Submittal_Date, 
+    Document_Submittal_Date, Extension_Marker, Kanban_Column, Kanban_Column_Done, 
+    EA_Number, Priority_Traffic_Ops, Fiscal_Year, Funding_Source, Route_Type, 
+    Construction_EA_Number, Official_DOC_Date, Official_Advertise_Date, Anchor_Project, 
+    Complexity_Signals, Complexity_Lighting, Complexity_ITS, Complexity_Power_Design, 
+    Complexity_RoW_Coordination, Complexity_SLI_Project_Lead, Complexity_Solar_Design, 
+    Complexity_Trunkline
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?,?)'''
 
 # Prepare the values from JSON for insertion
-        values = (
+    values = (
         fields.get('System.Id', None),
     fields.get('System.AreaId', None),
     fields.get('System.AreaPath', ''),
@@ -373,11 +374,13 @@ def insert_projects_into_db(data):
 )
 
 # Execute the insert statement with values
-        cursor.execute(sql_insert_statement, values)
+    cursor.execute(sql_insert_statement, values)
 
 # Commit the transaction and close the connection
     conn.commit()
     conn.close()
+
+
 
 
 # Function to insert a flattened work item into the SQLite database
@@ -392,15 +395,14 @@ def insert_epics_into_db(data):
 
 # Prepare the SQL insert statement with placeholders
         sql_insert_statement = '''
-         INSERT INTO epics (
-        System_Id, System_AreaPath, System_TeamProject, System_IterationPath,
-        System_WorkItemType, System_State, System_Reason, System_CreatedDate,
-        System_ChangedDate, System_Title, System_BoardColumn, System_BoardColumnDone,
-        Microsoft_VSTS_Common_StateChangeDate, Microsoft_VSTS_Common_Priority,
-        Microsoft_VSTS_Common_ValueArea, Microsoft_VSTS_Common_BacklogPriority, System_Parent
-    )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) '''
-
+        INSERT OR REPLACE INTO epics (
+    System_Id, System_AreaPath, System_TeamProject, System_IterationPath,
+    System_WorkItemType, System_State, System_Reason, System_CreatedDate,
+    System_ChangedDate, System_Title, System_BoardColumn, System_BoardColumnDone,
+    Microsoft_VSTS_Common_StateChangeDate, Microsoft_VSTS_Common_Priority,
+    Microsoft_VSTS_Common_ValueArea, Microsoft_VSTS_Common_BacklogPriority, System_Parent
+)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);'''
 # Prepare the values from JSON for insertion
         values = (
         fields.get('System.Id'),
@@ -445,7 +447,7 @@ def insert_features_into_db(data):
 
 # Prepare the SQL insert statement with placeholders
         sql_insert_statement = '''
-        INSERT INTO features (
+        INSERT OR REPLACE INTO  features (
         system_Id, System_AreaPath, System_TeamProject, System_IterationPath,
         System_WorkItemType, System_State, System_Reason, System_CreatedDate,
         System_ChangedDate, System_Title, System_BoardColumn, System_BoardColumnDone,
@@ -494,7 +496,7 @@ def insert_pbis_into_db(data):
 
 # Prepare the SQL insert statement with placeholders
         sql_insert_statement = '''
-        INSERT INTO productbacklogitems (
+        INSERT OR REPLACE INTO  productbacklogitems (
         System_Id, System_AreaId, System_AreaPath, System_TeamProject, 
         System_NodeName, System_AreaLevel1, System_Rev, System_AuthorizedDate, 
         System_RevisedDate, System_IterationId, System_IterationPath, System_IterationLevel1, 
@@ -574,18 +576,21 @@ def refresh_data(work_item_type):
                     insert_pbis_into_db(all_work_items)
     else:
         pass
-        # st.warning(f"No {work_item_type} items found for the given criteria.")
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("INSERT INTO data_refresh_log (last_refresh_time) VALUES (CURRENT_TIMESTAMP)")
+    conn.commit()
+    conn.close()  
 
 def getDataFromDevops():
     # Initialize the database
-    init_db()
+   # init_db()
     refresh_data('Project')
-    refresh_data('Epic')
-    refresh_data('Feature')
-    refresh_data('Product Backlog Item')
+    # refresh_data('Epic')
+    # refresh_data('Feature')
+    # refresh_data('Product Backlog Item')
     
    
 
 
-getDataFromDevops()
 
