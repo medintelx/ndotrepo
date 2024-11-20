@@ -288,6 +288,10 @@ def distribute_epics_to_sprints(anchor_projects_df, non_anchor_projects_df, upco
             start_sprint_index = None
             for index in range(len(upcoming_sprints_df)):
                 sprints_considered = upcoming_sprints_df.iloc[index:]
+                # Filter sprints based on nearest_doc_date
+                if nearest_due_date is not None:
+                    sprints_considered = sprints_considered[sprints_considered['Start_date'] <= nearest_due_date]
+
                 num_sprints = len(sprints_considered)
                 if num_sprints > 0:
                     average_effort = remaining_effort / num_sprints
