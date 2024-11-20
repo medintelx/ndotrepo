@@ -1219,11 +1219,15 @@ def main_application():
                                 update_leave_in_db(st.session_state["edit_leave_id"], leave_from, leave_to)
                                 st.success("Leave updated successfully!")
                                 st.session_state.pop("edit_leave_id")  # Clear edit session state
+                                modal.close()
+                                st.rerun()
                             else:
                                 # Add new leave
                                 user_id = users_df[users_df['name'] == user_name]['id'].values[0]
                                 add_leave_to_db(user_id, leave_from, leave_to)
                                 st.success("Leave added successfully!")
+                                modal.close()
+                                st.rerun()
 
                             st.rerun()  # Refresh to display the updated list
                 else:
