@@ -274,8 +274,9 @@ def distribute_epics_to_sprints(anchor_projects_df, non_anchor_projects_df, upco
 
             # Consider all sprints starting from the determined index
             sprints = upcoming_sprints_df.iloc[start_sprint_index:] if start_sprint_index is not None else pd.DataFrame()
+            # Mark overdue sprints
             if not sprints.empty:
-                sprints['overdue'] = sprints['Start_date'].apply(lambda x: x > nearest_due_date if nearest_due_date else False)
+                sprints.loc[:, 'overdue'] = sprints['Start_date'].apply(lambda x: x > nearest_due_date if nearest_due_date else False)
 
             # Separate non-overdue and overdue sprints
             non_overdue_sprints = sprints[~sprints['overdue']]
