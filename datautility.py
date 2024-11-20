@@ -382,7 +382,7 @@ def distribute_epics_to_sprints(anchor_projects_df, non_anchor_projects_df, upco
                 num_sprints = len(sprints_considered)
                 if num_sprints > 0:
                     average_effort = remaining_effort / num_sprints
-                    if average_effort >= minimum_epic_points or nearest_due_date is not None:
+                    if average_effort >= minimum_epic_points:
                         start_sprint_index = index
                         break
 
