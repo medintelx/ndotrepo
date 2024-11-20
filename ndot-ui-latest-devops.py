@@ -14,7 +14,7 @@ import pandas as pd
 import datautilitydevops as du
 from dotenv import load_dotenv
 from st_aggrid.shared import GridUpdateMode
-#import streamlitforecastapp as devopsdata
+import streamlitforecastapp as devopsdata
 load_dotenv()
 
 
@@ -533,7 +533,12 @@ current_month = today.month
 
 # Main application after login
 def main_application():
-   
+    try:
+        devopsdata.getDataFromDevops()  # Replace with your actual method call
+    except Exception as e:
+        # Log the error (optional) and continue
+        print(f"An error occurred while fetching data: {e}")
+        pass
     # Initialize session state to handle page navigation
     if 'page' not in st.session_state:
         st.session_state.page = 'Home'
