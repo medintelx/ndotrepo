@@ -237,7 +237,7 @@ import numpy as np
 #     # Return the styled pivot table with no index column displayed
 #     #return df_uniform.style.applymap(highlight_overdue, subset=df_uniform.columns)
 #     return df_uniform,anchor_projects_df,non_anchor_projects_df
-@st.cache_data  
+#@st.cache_data  
 def distribute_epics_to_sprints(anchor_projects_df, non_anchor_projects_df, upcoming_sprints_df):
     # Initialize dictionary to store sprint allocations
     sprint_allocations = {sprint: {'anchor': [], 'non_anchor': [], 'remaining_anchor_effort': 0, 'remaining_non_anchor_effort': 0}
@@ -246,6 +246,9 @@ def distribute_epics_to_sprints(anchor_projects_df, non_anchor_projects_df, upco
     non_anchor_projects_df['nearest_doc_date'] = pd.to_datetime(non_anchor_projects_df['nearest_doc_date'], errors='coerce').dt.tz_localize(None)
     upcoming_sprints_df['Start_date'] = pd.to_datetime(upcoming_sprints_df['Start_date'], errors='coerce').dt.tz_localize(None)
     upcoming_sprints_df['End_date'] = pd.to_datetime(upcoming_sprints_df['End_date'], errors='coerce').dt.tz_localize(None)
+
+    # Get the last sprint's start date
+    last_sprint_end_date = upcoming_sprints_df['End_date'].max()
 
     # Initialize remaining capacity for each sprint
     for _, sprint in upcoming_sprints_df.iterrows():
@@ -258,8 +261,28 @@ def distribute_epics_to_sprints(anchor_projects_df, non_anchor_projects_df, upco
         max_effort_per_sprint_column = 'MaxAnchorEffortPointspersprint' if project_type == 'anchor' else 'MaxNonAnchorEffortPointspersprint'
         for _, epic in projects_df.iterrows():
             remaining_effort = epic['total_effort_from_pbis']
-            nearest_due_date = pd.to_datetime(epic['nearest_doc_date']) if not pd.isnull(epic['nearest_doc_date']) else None
+            nearest_due_date = pd.to_datetime(epic['nearest_doc_date']) if not pd.isnull(epic['nearest_doc_date']) else last_sprint_end_date
             minimum_epic_points = upcoming_sprints_df['minimumEpicPoints'].iloc[0]
+             # Handle allocation when remaining_effort < minimumEpicPoints
+                    # Handle allocation when remaining_effort < minimumEpicPoints
+            if remaining_effort < minimum_epic_points:
+                # Use the last sprint's end date if nearest_due_date is missing
+                effective_due_date = nearest_due_date if nearest_due_date else last_sprint_end_date
+
+                # Explicitly assign to the last sprint
+                last_sprint = upcoming_sprints_df.iloc[-1]  # Get the last sprint from the sprint DataFrame
+                sprint_name = last_sprint['Iteration']
+
+                # Allocate all remaining points to this sprint
+                remaining_sprint_capacity = sprint_allocations[sprint_name][f'remaining_{project_type}_effort']
+                allocated_effort = min(remaining_effort, remaining_sprint_capacity)
+
+                if allocated_effort > 0:
+                    effort_text = f"{int(epic['projects_Work_Item_ID'])} ({'A' if project_type == 'anchor' else 'NA'}) - {epic['epics_System_Title']} ({allocated_effort})"
+                    sprint_allocations[sprint_name][project_type].append({'project_epic_effort': effort_text})
+                    sprint_allocations[sprint_name][f'remaining_{project_type}_effort'] -= allocated_effort
+                    remaining_effort -= allocated_effort
+                continue  # Skip the rest of the logic for this epic
 
             # Find the starting sprint index
             start_sprint_index = None
@@ -281,8 +304,9 @@ def distribute_epics_to_sprints(anchor_projects_df, non_anchor_projects_df, upco
 
             # Mark overdue sprints
             if not sprints.empty:
+                
+                sprints = sprints.reset_index(drop=True).copy()  # Ensure writable DataFrame
                 sprints['overdue'] = sprints['Start_date'].apply(lambda x: x > nearest_due_date if nearest_due_date else False)
-
             # Convert the 'overdue' column to a boolean Series explicitly
             if 'overdue' in sprints.columns:
                 sprints['overdue'] = sprints['overdue'].astype(bool)  # Ensure it's a proper boolean
@@ -582,7 +606,7 @@ def get_upcoming_sprints_with_effortpoints_and_weightage():
         df.at[i, 'minimumEpicPoints'] = epicMinEffortPoints
 
     # Close the connection
-    print(df.to_excel("sample.xlsx"))
+    #print(df.to_excel("sample.xlsx"))
     conn.close()
     
     return df
