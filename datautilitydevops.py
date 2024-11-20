@@ -411,7 +411,9 @@ def get_project_data():
     # Rename effort column for clarity
     aggregated_df = aggregated_df.rename(columns={'pbis_Microsoft_VSTS_Scheduling_Effort': 'total_effort_from_pbis'})
     
-    
+      # Filter rows containing "Post" or "post" (case-insensitive)
+    aggregated_df = aggregated_df[~aggregated_df['epics_System_Title'].str.contains('Post', case=False, na=False)]
+
      # Define conditions and corresponding choices for nearest_doc_date
     conditions = [
         aggregated_df['epics_System_Title'].str.contains('QAQC|QA/QC|PS&E', case=False, na=False),
@@ -431,6 +433,14 @@ def get_project_data():
 
     # Apply conditions using np.select
     aggregated_df['nearest_doc_date'] = np.select(conditions, choices, default=np.nan)
+
+    # Combine all conditions to create a filter mask
+    filter_mask = conditions[0]
+    for condition in conditions[1:]:
+        filter_mask |= condition
+
+    # Filter out rows where none of the conditions are met
+    aggregated_df = aggregated_df[filter_mask].copy()
 
     # Reorder columns with specified order first
     ordered_columns = ['projects_Work_Item_ID', 'epics_System_Id', 'epics_System_Title', 'total_effort_from_pbis'] + \
