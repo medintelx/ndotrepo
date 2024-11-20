@@ -276,15 +276,25 @@ def distribute_epics_to_sprints(anchor_projects_df, non_anchor_projects_df, upco
             sprints = upcoming_sprints_df.iloc[start_sprint_index:] if start_sprint_index is not None else pd.DataFrame()
             # Mark overdue sprints
 
-            sprints = upcoming_sprints_df.iloc[start_sprint_index:] if start_sprint_index is not None else pd.DataFrame()
-            if not sprints.empty:
-                sprints =sprints.copy()
-                sprints.loc[:, 'overdue'] = sprints['Start_date'].apply(lambda x: x > nearest_due_date if nearest_due_date else False)
-            
-            # Separate non-overdue and overdue sprints
-            non_overdue_sprints = sprints[sprints['overdue'] == False]  # Filter non-overdue explicitly
-            overdue_sprints = sprints[sprints['overdue'] == True]
+                        # Ensure 'sprints' is a detached, fresh copy
+            sprints = sprints.reset_index(drop=True).copy()
 
+            # Mark overdue sprints
+            if not sprints.empty:
+                sprints['overdue'] = sprints['Start_date'].apply(lambda x: x > nearest_due_date if nearest_due_date else False)
+
+            # Convert the 'overdue' column to a boolean Series explicitly
+            if 'overdue' in sprints.columns:
+                sprints['overdue'] = sprints['overdue'].astype(bool)  # Ensure it's a proper boolean
+
+            # Perform filtering explicitly with .loc
+            if 'overdue' in sprints.columns:
+                non_overdue_sprints = sprints.loc[sprints['overdue'] == False]
+                overdue_sprints = sprints.loc[sprints['overdue'] == True]
+            else:
+                non_overdue_sprints = pd.DataFrame()
+                overdue_sprints = pd.DataFrame()
+           
             for sprint_group in [non_overdue_sprints, overdue_sprints]:
                 for _, sprint in sprint_group.iterrows():
                     sprint_name = sprint['Iteration']
