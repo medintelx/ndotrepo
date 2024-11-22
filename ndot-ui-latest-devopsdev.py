@@ -836,8 +836,8 @@ def main_application():
 
     
             st.session_state['selected_project_details']['Project ID'] = st.session_state['selected_project_details']['Project ID'].astype(int)
-            st.dataframe(st.session_state['selected_project_details'].style.format({"Project ID": "{:.0f}", 'Total Effort Points': "{}"}), hide_index=True) 
-        # st.write(anchor_project_df)
+            st.dataframe(st.session_state['selected_project_details'].style.format({"Project ID": "{:.0f}", "Epic ID": "{:.0f}",'Total Effort Points': "{}"}), hide_index=True) 
+      # st.write(anchor_project_df)
         # st.write("non-anchor")
         # st.write(non_anchor_project_df)
     
