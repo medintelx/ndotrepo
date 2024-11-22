@@ -853,7 +853,7 @@ def main_application():
         # Convert 'Start_date' and 'End_date' to US date format
         upcoming_sprint_data['Start_date'] = pd.to_datetime(upcoming_sprint_data['Start_date'], errors='coerce').dt.strftime('%m/%d/%Y')
         upcoming_sprint_data['End_date'] = pd.to_datetime(upcoming_sprint_data['End_date'], errors='coerce').dt.strftime('%m/%d/%Y')
-        df.rename(columns={
+        upcoming_sprint_data.rename(columns={
     'Iteration': 'Iteration',
     'Start_date': 'StartDate',
     'End_date': 'EndDate',
