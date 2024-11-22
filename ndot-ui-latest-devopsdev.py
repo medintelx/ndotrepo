@@ -749,17 +749,17 @@ def main_application():
 
             tabs = st.tabs(["Projects"])
             # Inject custom CSS for word wrap
-            # st.markdown(
-            #     """
-            #     <style>
-            #     .dataframe td {
-            #         white-space: normal !important;
-            #         word-wrap: break-word !important;
-            #     }
-            #     </style>
-            #     """,
-            #     unsafe_allow_html=True,
-            # )
+            st.markdown(
+                """
+                <style>
+                .dataframe td {
+                    white-space: normal !important;
+                    word-wrap: break-word !important;
+                }
+                </style>
+                """,
+                unsafe_allow_html=True,
+            )
 
             with tabs[0]:
 
