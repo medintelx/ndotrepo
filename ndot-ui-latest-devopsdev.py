@@ -848,7 +848,22 @@ def main_application():
         # Convert 'Start_date' and 'End_date' to US date format
         upcoming_sprint_data['Start_date'] = pd.to_datetime(upcoming_sprint_data['Start_date'], errors='coerce').dt.strftime('%m/%d/%Y')
         upcoming_sprint_data['End_date'] = pd.to_datetime(upcoming_sprint_data['End_date'], errors='coerce').dt.strftime('%m/%d/%Y')
-        upcoming_sprint_data.rename(columns=lambda x: ''.join(word.capitalize() for word in x.split('_')), inplace=True)
+        df.rename(columns={
+    'Iteration': 'Iteration',
+    'Start_date': 'StartDate',
+    'End_date': 'EndDate',
+    'Holidays_Count': 'HolidaysCount',
+    'Effort_points_per_user': 'EffortPointsPerUser',
+    'resource_count': 'ResourceCount',
+    'Leave_Days': 'LeaveDays',
+    'TotalEffortpoints': 'TotalEffortPoints',
+    'MiscEffortPoints': 'MiscEffortPoints',
+    'AnchorEffortPoints': 'AnchorEffortPoints',
+    'NonAnchorEffortPoints': 'NonAnchorEffortPoints',
+    'MaxAnchorEffortPointspersprint': 'MaxAnchorEffortPointsPerSprint',
+    'MaxNonAnchorEffortPointspersprint': 'MaxNonAnchorEffortPointsPerSprint',
+    'minimumEpicPoints': 'MinimumEpicPoints'
+}, inplace=True)
         st.dataframe(upcoming_sprint_data, hide_index=True) 
         st.write("Anchor")
         anchor_projects_df['projects_Fiscal_Year'] = pd.to_numeric(anchor_projects_df['projects_Fiscal_Year'], errors='coerce').fillna(0).astype(int)
