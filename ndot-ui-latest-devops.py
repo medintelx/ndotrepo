@@ -755,7 +755,17 @@ def main_application():
 
 
             tabs = st.tabs(["Projects"])
-        
+            st.markdown(
+                """
+                <style>
+                .dataframe td {
+                    white-space: normal !important;
+                    word-wrap: break-word !important;
+                }
+                </style>
+                """,
+                unsafe_allow_html=True,
+            )
             with tabs[0]:
 
                 anchor_project_df, non_anchor_project_df,projects_display_df = du.get_project_data()
