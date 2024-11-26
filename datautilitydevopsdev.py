@@ -261,7 +261,7 @@ def distribute_epics_to_sprints(anchor_projects_df, non_anchor_projects_df, upco
         max_effort_column = 'MaxAnchorEffortPointspersprint' if project_type == 'anchor' else 'MaxNonAnchorEffortPointspersprint'
 
         # Process each project
-        for project_id, project_group in projects_df.groupby('projects_Work_Item_ID'):
+        for project_id, project_group in projects_df.groupby('projects_Work_Item_ID',sort=False):
             epics = project_group.to_dict('records')
             used_sprints = set()  # To track sprints used for this project
 
