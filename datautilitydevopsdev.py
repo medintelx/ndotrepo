@@ -264,11 +264,11 @@ def distribute_epics_to_sprints(anchor_projects_df, non_anchor_projects_df, upco
         max_effort_per_sprint_column = 'MaxAnchorEffortPointspersprint' if project_type == 'anchor' else 'MaxNonAnchorEffortPointspersprint'
 
         # Group by project and calculate total effort
-        grouped_projects = projects_df.groupby('projects_Work_Item_ID').agg({
-            'total_effort_from_pbis': 'sum',
-            'nearest_doc_date': 'first',
-            'epics_System_Title': 'first'
-        }).reset_index()
+        grouped_projects = projects_df.groupby(['projects_Work_Item_ID', 'epics_Work_Item_ID']).agg({
+    'total_effort_from_pbis': 'sum',  # Roll up effort points at the epic level
+    'nearest_doc_date': 'first',
+    'epics_System_Title': 'first'
+}).reset_index()
 
         for _, project in grouped_projects.iterrows():
             remaining_effort = project['total_effort_from_pbis']
