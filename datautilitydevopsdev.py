@@ -381,20 +381,27 @@ def distribute_epics_to_sprints(anchor_projects_df, non_anchor_projects_df, upco
                 # Minimum Epic Points Check
                 minimum_epic_points = upcoming_sprints_df['minimumEpicPoints'].iloc[0]
                 if total_effort < minimum_epic_points:
-                    # Allocate to the first eligible sprint
+                    # Allocate to the last eligible sprint near the nearest due date
                     if num_eligible_sprints > 0:
-                        # Assign to the last eligible sprint near the nearest due date
-                        last_sprint = eligible_sprints_df.iloc[-1]  # Get the last sprint from the eligible sprints
+                        last_sprint = eligible_sprints_df.iloc[-1]
                         sprint_name = last_sprint['Iteration']
 
-                        # Allocate all effort to the last sprint
-                        sprint_allocations[sprint_name][project_type].append({
-                            'project_effort': f"{int(epic['projects_Work_Item_ID'])} ({'A' if project_type == 'anchor' else 'NA'}) - {epic_title} ({total_effort}) [Below Minimum Points]"
-                        })
-                        sprint_allocations[sprint_name][f'remaining_{project_type}_effort'] -= total_effort
+                        # Fetch the remaining capacity and max effort constraints for the sprint
+                        remaining_sprint_capacity = sprint_allocations[sprint_name][f'remaining_{project_type}_effort']
+                        max_effort_per_sprint = last_sprint[max_effort_column]
 
-                        # Mark the project as allocated to this sprint
-                        sprint_allocations[sprint_name].setdefault('allocated_projects', set()).add(project_id)
+                        # Calculate the actual effort to allocate (respecting constraints)
+                        allocated_effort = min(total_effort, remaining_sprint_capacity, max_effort_per_sprint)
+
+                        if allocated_effort > 0:
+                            # Allocate the allowed effort to the last sprint
+                            sprint_allocations[sprint_name][project_type].append({
+                                'project_effort': f"{int(epic['projects_Work_Item_ID'])} ({'A' if project_type == 'anchor' else 'NA'}) - {epic_title} ({allocated_effort}) [Below Min Points]"
+                            })
+                            sprint_allocations[sprint_name][f'remaining_{project_type}_effort'] -= allocated_effort
+
+                            # Mark the project as allocated to this sprint
+                            sprint_allocations[sprint_name].setdefault('allocated_projects', set()).add(project_id)
 
                     continue  # Skip further distribution logic for this epic
 
