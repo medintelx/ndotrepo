@@ -383,14 +383,19 @@ def distribute_epics_to_sprints(anchor_projects_df, non_anchor_projects_df, upco
                 if total_effort < minimum_epic_points:
                     # Allocate to the first eligible sprint
                     if num_eligible_sprints > 0:
-                        first_sprint = eligible_sprints_df.iloc[0]
-                        sprint_name = first_sprint['Iteration']
+                        # Assign to the last eligible sprint near the nearest due date
+                        last_sprint = eligible_sprints_df.iloc[-1]  # Get the last sprint from the eligible sprints
+                        sprint_name = last_sprint['Iteration']
 
-                        # Allocate all effort to the first sprint
+                        # Allocate all effort to the last sprint
                         sprint_allocations[sprint_name][project_type].append({
                             'project_effort': f"{int(epic['projects_Work_Item_ID'])} ({'A' if project_type == 'anchor' else 'NA'}) - {epic_title} ({total_effort}) [Below Minimum Points]"
                         })
                         sprint_allocations[sprint_name][f'remaining_{project_type}_effort'] -= total_effort
+
+                        # Mark the project as allocated to this sprint
+                        sprint_allocations[sprint_name].setdefault('allocated_projects', set()).add(project_id)
+
                     continue  # Skip further distribution logic for this epic
 
                 # Adjust distribution logic based on minimum epic points
