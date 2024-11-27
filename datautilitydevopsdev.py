@@ -373,25 +373,40 @@ def distribute_epics_to_sprints(anchor_projects_df, non_anchor_projects_df, upco
                 # Allocate effort across sprints
                 #is_far_nearest_date = nearest_due_date and nearest_due_date > six_months_later
                 
-                # Calculate average distribution
-                average_distribution = 0
-                # Filter the upcoming_sprints_df to only include sprints with End_date before the nearest_due_date
-                # If nearest_due_date is None, filter by the last_sprint_end_date
-                eligible_sprints_df = upcoming_sprints_df[upcoming_sprints_df['Start_date'] < nearest_due_date]
+                 
+                # Filter sprints eligible for the epic
+                eligible_sprints_df = upcoming_sprints_df[upcoming_sprints_df['End_date'] < nearest_due_date] if nearest_due_date else upcoming_sprints_df
+                num_eligible_sprints = len(eligible_sprints_df)
 
-                # Calculate total allocated effort for eligible sprints
-                total_allocated = sum(
-                    sprint_allocations[sprint]['remaining_' + project_type + '_effort']
-                    for sprint in sprint_allocations
-                    if sprint in eligible_sprints_df['Iteration'].values
-)
+                # Minimum Epic Points Check
+                minimum_epic_points = upcoming_sprints_df['minimumEpicPoints'].iloc[0]
+                if total_effort < minimum_epic_points:
+                    # Allocate to the first eligible sprint
+                    if num_eligible_sprints > 0:
+                        first_sprint = eligible_sprints_df.iloc[0]
+                        sprint_name = first_sprint['Iteration']
 
-                # Calculate average distribution using only eligible sprints
-                average_distribution = total_allocated / len(eligible_sprints_df) if len(eligible_sprints_df) > 0 else 0
-                minimumepicpoints = upcoming_sprints_df.iloc[0]['minimumEpicPoints']
-                # Skip epics that don't meet the minimum epic points threshold
-                if average_distribution < minimumepicpoints and not total_effort < minimumepicpoints:
-                    continue
+                        # Allocate all effort to the first sprint
+                        sprint_allocations[sprint_name][project_type].append({
+                            'project_effort': f"{int(epic['projects_Work_Item_ID'])} ({'A' if project_type == 'anchor' else 'NA'}) - {epic_title} ({total_effort}) [Below Minimum Points]"
+                        })
+                        sprint_allocations[sprint_name][f'remaining_{project_type}_effort'] -= total_effort
+                    continue  # Skip further distribution logic for this epic
+
+                # Adjust distribution logic based on minimum epic points
+                if num_eligible_sprints > 0:
+                    start_index = 0  # Default to the first eligible sprint
+                    for idx in range(num_eligible_sprints):
+                        remaining_sprints = eligible_sprints_df.iloc[idx:]
+                        num_remaining_sprints = len(remaining_sprints)
+                        average_distribution = total_effort / num_remaining_sprints
+
+                        if average_distribution >= minimum_epic_points:
+                            start_index = idx
+                            break
+
+                    # Filter sprints starting from the calculated index
+                    eligible_sprints_df = eligible_sprints_df.iloc[start_index:]
                 for _, sprint in upcoming_sprints_df.iterrows():
                     sprint_name = sprint['Iteration']
                     sprint_start_date = sprint['Start_date']
