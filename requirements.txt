@@ -1,11 +1,11 @@
 python-dotenv
-plotly
-st_material_table
 setuptools
 streamlit_modal
 streamlit-aggrid
 openpyxl
 pandas==2.2.2
 numpy==1.26.4
+aiohttp
+asyncio
 
 
