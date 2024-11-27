@@ -368,20 +368,26 @@ def distribute_epics_to_sprints(anchor_projects_df, non_anchor_projects_df, upco
                 epic_title = epic['epics_System_Title']
                 total_effort = epic['total_effort_from_pbis']
                 #Use nearest_doc_date or None
-                nearest_due_date = pd.to_datetime(epic['nearest_doc_date']) if not pd.isnull(epic['nearest_doc_date']) else None
+                nearest_due_date = pd.to_datetime(epic['nearest_doc_date']) if not pd.isnull(epic['nearest_doc_date']) else last_sprint_end_date
                 # Find the first available sprint that can accommodate the epic
                 # Allocate effort across sprints
                 #is_far_nearest_date = nearest_due_date and nearest_due_date > six_months_later
                 
                 # Calculate average distribution
                 average_distribution = 0
-               
+                # Filter the upcoming_sprints_df to only include sprints with End_date before the nearest_due_date
+                # If nearest_due_date is None, filter by the last_sprint_end_date
+                eligible_sprints_df = upcoming_sprints_df[upcoming_sprints_df['Start_date'] < nearest_due_date]
+
+                # Calculate total allocated effort for eligible sprints
                 total_allocated = sum(
                     sprint_allocations[sprint]['remaining_' + project_type + '_effort']
                     for sprint in sprint_allocations
-                    if  nearest_due_date is not None and upcoming_sprints_df.loc[upcoming_sprints_df['Iteration'] == sprint, 'End_date'].iloc[0] < nearest_due_date
-                )
-                average_distribution = total_allocated / len(upcoming_sprints_df)
+                    if sprint in eligible_sprints_df['Iteration'].values
+)
+
+                # Calculate average distribution using only eligible sprints
+                average_distribution = total_allocated / len(eligible_sprints_df) if len(eligible_sprints_df) > 0 else 0
                 minimumepicpoints = upcoming_sprints_df.iloc[0]['minimumEpicPoints']
                 # Skip epics that don't meet the minimum epic points threshold
                 if average_distribution < minimumepicpoints and not total_effort < minimumepicpoints:
