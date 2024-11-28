@@ -1,38 +1,36 @@
+import asyncio
+from streamlit.runtime.scriptrunner import add_script_run_ctx
 import streamlit as st
 import sqlite3
 import pandas as pd
 from datetime import datetime
 from dotenv import load_dotenv
 import os
-import plotly.graph_objects as go
-import pandas as pd
-from st_material_table import st_material_table
 import calendar
 from streamlit_modal import Modal
 from st_aggrid import AgGrid, GridOptionsBuilder, AgGridTheme, JsCode
-import pandas as pd
 import datautilitydevopsdev as du
-from dotenv import load_dotenv
 from st_aggrid.shared import GridUpdateMode
-import streamlitforecastapp as devopsdata
-load_dotenv()
-
-
-#DB_PATH = os.getenv('DB_PATH')
-DB_PATH = 'NDOTDATA-dev-test.db'
-# st.markdown("""
-#     <style>
-#         .reportview-container {
-#             margin-top: -2em;
-#         }
-#         #MainMenu {visibility: hidden;}
-#         .stDeployButton {display:none;}
-#         footer {visibility: hidden;}
-#         #stDecoration {display:none;}
-#         .stAppHeader {visibility: hidden;}
-#     </style>
-# """, unsafe_allow_html=True)
+import devopsdataasync as devopsdata
+load_dotenv(override=True)
 st.set_page_config(layout="wide")
+
+DB_PATH = os.getenv('DB_PATH')
+
+
+st.markdown("""
+    <style>
+        .reportview-container {
+            margin-top: -2em;
+        }
+        #MainMenu {visibility: hidden;}
+        .stDeployButton {display:none;}
+        footer {visibility: hidden;}
+        #stDecoration {display:none;}
+        .stAppHeader {visibility: hidden;}
+    </style>
+""", unsafe_allow_html=True)
+
 login_css= """
 <style>
 .appview-container {
@@ -91,23 +89,45 @@ sidebar_style = """
 # Injecting the custom CSS into the Streamlit app
 st.markdown(sidebar_style, unsafe_allow_html=True)
  
-# Load environment variables from a .env file
-load_dotenv()
+
 
 DB_NAME = os.getenv('DB_NAME')
 
 # Path to the text file containing usernames (update with actual path)
-USER_FILE = 'usernames.txt'
+
+USER_FILE = os.getenv('USER_FILE')
 
 # Function to check if the username exists in the file
 def check_username(username):
     if os.path.exists(USER_FILE):
         with open(USER_FILE, 'r') as file:
+           
             valid_usernames = [line.strip() for line in file.readlines()]
-            return username in valid_usernames
+            
+            #return username in valid_usernames
+            return True
     else:
         return False
 
+
+def get_last_refresh_time():
+    """
+    Fetch the latest refresh time from the data_refresh_log table.
+    """
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        query = "SELECT MAX(last_refresh_time) AS refresh_time FROM data_refresh_log"
+        result = conn.execute(query).fetchone()
+        conn.close()
+        
+        # Return the latest refresh time if available
+        if result and result[0]:
+            return datetime.strptime(result[0], "%Y-%m-%d %H:%M:%S")   # Adjust format if needed
+        else:
+            return None
+    except Exception as e:
+        st.error(f"Error fetching last refresh time: {e}")
+        return None
 
 # Main function for the login screen
 def login_screen():
@@ -145,6 +165,8 @@ def login_screen():
     if st.button("Login"):
         if check_username(username):
             st.session_state['logged_in'] = True  # Set session state to indicate user is logged in
+           
+            
             st.rerun()  # Force the app to rerun immediately to reflect the state change
         else:
             # st.error("Invalid username. Please try again.")
@@ -531,7 +553,6 @@ current_month = today.month
 
 # Main application after login
 def main_application():
-    devopsdata.getDataFromDevops()
     # Initialize session state to handle page navigation
     if 'page' not in st.session_state:
         st.session_state.page = 'Home'
@@ -541,7 +562,7 @@ def main_application():
         st.session_state.selected_project_details = pd.DataFrame()  # Initialize empty dataframe in session state
         
 
-
+    
     # Sidebar styling
     st.sidebar.markdown(
         """
@@ -617,15 +638,9 @@ def main_application():
 </div>
 """
 
-    #st.sidebar.write(htmlstr)
     st.sidebar.html(htmlstr)
-   # st.sidebar.write("SLI Forecasting Tool", key="ToolName")
-    # Sidebar with interactive buttons
-   # st.sidebar.divider()
     if st.sidebar.button('🏠 Home', key='home'):
         st.session_state.page = 'Home'
-    # if st.sidebar.button('📊 Dashboard', key='dashboard'):
-    #     st.session_state.page = 'Dashboard'
     if st.sidebar.button('👤 Resources', key='resources'):
         st.session_state.page = 'Resources'
     if st.sidebar.button('📅 Leaves', key='leaves'):
@@ -637,9 +652,10 @@ def main_application():
         # Logout button
     if st.sidebar.button("🔓 Logout", key='logout'):
         st.session_state['logged_in'] = False  # Log out the user
+        st.session_state['data_fetched'] = True
         st.rerun() 
         
-
+    
     # Based on the selected page, display the corresponding content
     if st.session_state.page == 'Home':
         
@@ -748,7 +764,7 @@ def main_application():
 
 
             tabs = st.tabs(["Projects"])
-            # Inject custom CSS for word wrap
+            #Inject custom CSS for word wrap
             st.markdown(
                 """
                 <style>
@@ -836,13 +852,8 @@ def main_application():
 
     
             st.session_state['selected_project_details']['Project ID'] = st.session_state['selected_project_details']['Project ID'].astype(int)
-            st.dataframe(st.session_state['selected_project_details'].style.format({"Project ID": "{:.0f}", "Epic ID": "{:.0f}",'Total Effort Points': "{}"}), hide_index=True) 
-      # st.write(anchor_project_df)
-        # st.write("non-anchor")
-        # st.write(non_anchor_project_df)
-    
-        # st.write("Sprint Allocation")
-        # st.write(allocation)
+            st.dataframe(st.session_state['selected_project_details'].style.format({"Project ID": "{:.0f}", 'Total Effort Points': "{}", "Epic ID": "{:.0f}"}), hide_index=True) 
+
         st.write("Upcoming Sprint Data")
 
         # Convert 'Start_date' and 'End_date' to US date format
@@ -920,7 +931,25 @@ def main_application():
         styled_non_anchor_df = non_anchor_project_df.style.format(format_dict)
         st.dataframe(styled_non_anchor_df, hide_index=True)
         st.write("Data from Azure devops")
-    
+        last_refresh = get_last_refresh_time()
+        if last_refresh:
+            st.markdown(
+                f"""
+                <p style='font-size:12px; color: gray;'>
+                   (Last updated at:  {last_refresh.strftime('%B %d, %Y %I:%M %p')})
+                </p>
+                """,
+                unsafe_allow_html=True
+            )
+        else:
+            st.markdown(
+                """
+                <p style='font-size:12px; color: gray;'>
+                    No refresh data available.
+                </p>
+                """,
+                unsafe_allow_html=True
+            )
         # st.button("Refresh")
 
         # Columns to filter in the final DataFrame
@@ -960,137 +989,9 @@ def main_application():
             # Apply styling to format columns
         styled_filtered_data_df = filtered_data.style.format(format_project_display_dict)
         st.dataframe(styled_filtered_data_df, hide_index=True)
-
-    elif st.session_state.page == 'Dashboard':
-        st.title("Dashboard")
-        st.write("Welcome to the Dashboard!")
-
-#     elif st.session_state.page == 'Leaves':
-#         st.markdown(""" <style>
-#                     .LeaveManage {
-#                     color: #ADD8E6;
-#                     font-size: 20px;
-#                     font-weight: bold;  
-#                     }
-                   
-#                      div.stMainBlockContainer.block-container.st-emotion-cache-1jicfl2.ea3mdgi5 {
-#                     padding-top: 2rem !important;
-#                     padding-left: 2rem !important;
-#                     font-size: 12px;
-#         }
-#         div.stVerticalBlock.st-emotion-cache-2ajiip.e1f1d6gn2{
-#                     gap:0;
-#         }
-#         dev.stForm.st-emotion-cache-4uzi61.e10yg2by1{
-#                     background-color:  #ADD8E6 !important;
-#         }
-#                     }
-#                     </style>
-#                     """, unsafe_allow_html=True)
-
-#      # Title for Leave Management
-#         htmlleavestr = """
-# <div class='LeaveManage'>
-# <span>Leave Management</span>
-# </div>
-# """ 
-#         st.html(htmlleavestr)
-#         #st.title("Leave Management")
-
-#         # Create a modal instance
-#         modal = Modal(key="add_leave_modal", title="Add Leave")
-
-#         # Add Leave button in the top-right corner
-#         add_leave_button = st.button("Add Leave", key="add_leave_button", help="Click to add leave")
-
-
-
-#             # Fetch leaves data
-#         leaves_df = fetch_leaves_from_db()
-
-       
         
-#         if not leaves_df.empty:
-#             # Display the column headers using st.columns
-#             header1, header2, header3, header5= st.columns([1, 1,1,1])
-#             header1.write("**Name**")
-#             header2.write("**Leave From**")
-#             header3.write("**Leave To**")
-#             #header4.write("*Edit Actions*")
-#             header5.write("**Action**")
+        
 
-#             for i, row in leaves_df.iterrows():
-#                 col1, col2, col3, col5 = st.columns([1, 1, 1, 1])
-#                 col1.write(row["name"])
-#                                 # Convert 'leave_from' and 'leave_to' to US date format
-#                 leave_from_us = pd.to_datetime(row["leave_from"]).strftime('%m/%d/%Y')
-#                 leave_to_us = pd.to_datetime(row["leave_to"]).strftime('%m/%d/%Y')
-
-#                 # Write the formatted dates
-#                 col2.write(leave_from_us)
-#                 col3.write(leave_to_us)
-
-
-#                 # Add Edit button
-#                 # edit_button = col4.button("Edit", key=f"edit_{row['id']}")
-#                 # if edit_button:
-#                 #     st.session_state["edit_leave_id"] = row["id"]
-#                 #     st.session_state["edit_leave_from"] = row["leave_from"]
-#                 #     st.session_state["edit_leave_to"] = row["leave_to"]
-#                 #     modal.open()  # Open edit modal
-
-#                 # Add Delete button
-#                 delete_button = col5.button("Delete", key=f"delete_{row['id']}")
-#                 if delete_button:
-#                     delete_leave_from_db(row["id"])
-#                     st.success("Leave deleted successfully!")
-#                     st.rerun()  # Refresh to reflect changes
-#         else:
-#             st.write("No leave records found.")
-
-#         # Trigger modal when Add Leave button is clicked
-#         if add_leave_button:
-#             modal.open()
-#         if modal.is_open() and "edit_leave_id" in st.session_state:
-#             with modal.container():
-#                 st.write("Edit Leave")
-
-#                 with st.form(key='edit_leave_form'):
-#                     leave_from = st.date_input("Leave From", value=st.session_state["edit_leave_from"])
-#                     leave_to = st.date_input("Leave To", value=st.session_state["edit_leave_to"])
-#                     submit_button = st.form_submit_button(label="Update Leave")
-
-#                     if submit_button:
-#                         update_leave_in_db(st.session_state["edit_leave_id"], leave_from, leave_to)
-#                         st.success("Leave updated successfully!")
-#                         st.rerun()  # Refresh to display updated leave
-#         if modal.is_open():
-#             with modal.container():
-                
-
-#                 # Fetch all users from the database
-#                 users_df = fetch_users_from_db()
-
-#                 if not users_df.empty:
-#                     # Form for adding a leave
-
-#                     with st.form(key='leave_form'):
-#                         user = st.selectbox("Select Resource", users_df['name'])
-#                         leave_from = st.date_input("Leave From")
-#                         leave_to = st.date_input("Leave To")
-
-#                         submit_button = st.form_submit_button(label="Submit Leave")
-
-#                         if submit_button:
-#                             # Get the selected user's ID
-#                             user_id = users_df[users_df['name'] == user]['id'].values[0]
-                            
-#                             # Add the leave to the database
-#                             add_leave_to_db(user_id, leave_from, leave_to)
-#                             st.rerun()
-
-#                 else:
-#                     st.write("No Resources available.")
     elif st.session_state.page == 'Leaves':
         st.markdown(""" <style>
                     .LeaveManage {
@@ -1229,9 +1130,7 @@ def main_application():
                             user_name = st.selectbox("Select User", users_df['name'].tolist())
                             leave_from = st.date_input("Leave From")
                             leave_to = st.date_input(
-                                "Leave To", 
-                                min_value=leave_from,  # Restrict minimum date to "From Date"
-                                value=leave_from  # Default value is the same as "From Date"
+                                "Leave To"  # Default value is the same as "From Date"
                             )
                             submit_label = "Submit Leave"
 
@@ -1610,7 +1509,11 @@ def main_application():
                 # Update session state with new config to reflect changes without leaving the page
                 st.session_state.config_data = fetch_latest_config()
                 st.rerun()
-   
+
+# Initialize session state for data fetching
+if "data_fetched" not in st.session_state:
+    st.session_state['data_fetched'] = False  # Indicates if data has been fetched
+
 # Check if the user is logged in
 if 'logged_in' not in st.session_state:
     st.session_state['logged_in'] = False
@@ -1618,6 +1521,17 @@ if 'logged_in' not in st.session_state:
 # Display login screen or main screen based on login status
 if not st.session_state['logged_in']:
     login_screen()
+    #Fetch data only once during login
+ 
+    if not st.session_state['data_fetched']:
+        with st.spinner("Fetching data..."):
+            try:
+                # Fetch data and store in session state if needed
+                st.session_state.devops_data = asyncio.run(devopsdata.get_data_from_devops())
+                st.session_state['data_fetched'] = True  # Mark as fetched
+                st.popover("Data fetched successfully!")
+            except Exception as e:
+                st.error(f"Failed to fetch data: {e}")
 else:
     main_application()
    
