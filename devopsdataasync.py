@@ -29,13 +29,21 @@ def encode_pat_to_base64(pat):
     return base64.b64encode(pat_with_colon.encode('utf-8')).decode('utf-8')
 
 
-# Format date from ISO 8601 to YYYY-MM-DD
-def format_date(date_str):
-    """Format date from ISO 8601 to YYYY-MM-DD."""
-    if date_str:
-        return datetime.strptime(date_str, "%Y-%m-%dT%H:%M:%SZ").strftime("%Y-%m-%d")
-    return None
-
+def format_date(timestamp):
+    formats = [
+        "%Y-%m-%dT%H:%M:%SZ",     # Format without fractional seconds
+        "%Y-%m-%dT%H:%M:%S.%fZ"   # Format with fractional seconds
+    ]
+    for fmt in formats:
+        try:
+            # Try parsing with each format
+            dt = datetime.strptime(timestamp, fmt)
+            # Format the datetime object to the desired date string
+            return dt.strftime("%Y-%m-%d")
+        except ValueError:
+            continue
+    # Raise an error if no format matches
+    raise ValueError(f"Timestamp does not match expected formats: {timestamp}")
 
 # Asynchronous method to fetch iteration data
 async def fetch_iteration_data():
@@ -48,7 +56,7 @@ async def fetch_iteration_data():
             if response.status == 200:
                 return await response.json()
             else:
-                print(f"Failed to fetch iteration data: {response.status} - {await response.text()}")
+                print(f"Failed to fetch iteration data: {response} {response.status} - {await response.text()}")
                 return None
 
 
@@ -153,6 +161,7 @@ async def fetch_work_item_details(ids, work_item_type):
 
 # Function to parse iteration data
 def parse_iteration_data(response):
+    #print(response)
     """Parse API response and extract iteration details."""
     iterations = []
     for item in response.get('value', []):
@@ -172,7 +181,6 @@ def insert_or_update_iterations(db_path, iterations):
     """Insert or update iteration data into the database."""
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
-
     for iteration in iterations:
         cursor.execute("""
             INSERT INTO iterations (Iteration, Start_date, End_date, modified_date)
@@ -185,21 +193,7 @@ def insert_or_update_iterations(db_path, iterations):
 
     conn.commit()
     conn.close()
-def format_date(date_value):
-    if date_value:
-        try:
-            # Handle ISO 8601 format with fractional seconds and Z (Zulu time)
-            if date_value.endswith('Z'):
-                date_value = date_value[:-1]  # Remove the 'Z'
-                return datetime.strptime(date_value, '%Y-%m-%dT%H:%M:%S.%f').strftime('%Y-%m-%d %H:%M:%S')
-            else:
-                # Handle ISO 8601 without 'Z'
-                return datetime.strptime(date_value, '%Y-%m-%dT%H:%M:%S').strftime('%Y-%m-%d %H:%M:%S')
-        except ValueError:
-            # Log error and return None if the date format is invalid
-            print(f"Invalid date format: {date_value}")
-            return None
-    return None
+
 
 # Function to insert work items into the SQLite database table
 def insert_projects_into_db(data):
@@ -256,7 +250,7 @@ def insert_projects_into_db(data):
             Kanban_Column = excluded.Kanban_Column,
             Kanban_Column_Done = excluded.Kanban_Column_Done,
             EA_Number = excluded.EA_Number,
-            Priority_Traffic_Ops = excluded.Priority_Traffic_Tops,
+            Priority_Traffic_Ops = excluded.Priority_Traffic_Ops,
             Fiscal_Year = excluded.Fiscal_Year,
             Funding_Source = excluded.Funding_Source,
             Route_Type = excluded.Route_Type,
@@ -288,8 +282,8 @@ def insert_projects_into_db(data):
                 fields.get('System.NodeName', ''),
                 fields.get('System.AreaLevel1', ''),
                 fields.get('System.Rev', None),
-                format_date(fields.get('System.AuthorizedDate', None)),
-                format_date(fields.get('System.RevisedDate', None)),
+                fields.get('System.AuthorizedDate', None),
+                fields.get('System.RevisedDate', None),
                 fields.get('System.IterationId', None),
                 fields.get('System.IterationPath', ''),
                 fields.get('System.IterationLevel1', ''),
@@ -303,15 +297,15 @@ def insert_projects_into_db(data):
                 fields.get('System.Title', ''),
                 fields.get('System.BoardColumn', ''),
                 int(fields.get('System.BoardColumnDone', False)),
-                format_date(fields.get('Microsoft.VSTS.Common.StateChangeDate', None)),
+                fields.get('Microsoft.VSTS.Common.StateChangeDate', None),
                 fields.get('Microsoft.VSTS.Common.BusinessValue', None),
                 fields.get('Microsoft.VSTS.Common.BacklogPriority', None),
                 fields.get('Custom.Health', 'Unknown'),
                 fields.get('Custom.30PercentScoping', None),
-                format_date(fields.get('Custom.IntermediateDate', None)),
-                format_date(fields.get('Custom.75PercentComplete', None)),
-                format_date(fields.get('Custom.QAQCSubmittalDate', None)),
-                format_date(fields.get('Custom.DocumentSubmittalDate', None)),
+                fields.get('Custom.IntermediateDate', None),
+                fields.get('Custom.75PercentComplete', None),
+                fields.get('Custom.QAQCSubmittalDate', None),
+                fields.get('Custom.DocumentSubmittalDate', None),
                 int(fields.get('WEF_3EF069D225F848D0A794779F40639E36_System.ExtensionMarker', False)),
                 fields.get('WEF_3EF069D225F848D0A794779F40639E36_Kanban.Column', None),
                 int(fields.get('WEF_3EF069D225F848D0A794779F40639E36_Kanban.Column.Done', False)),
@@ -321,8 +315,8 @@ def insert_projects_into_db(data):
                 fields.get('Custom.FundingSource', None),
                 fields.get('Custom.RouteType', None),
                 fields.get('Custom.ConstructionEANumber', None),
-                format_date(fields.get('Custom.OfficialDOCDate', None)),
-                format_date(fields.get('Custom.OfficialAdvertiseDate', None)),
+                fields.get('Custom.OfficialDOCDate', None),
+                fields.get('Custom.OfficialAdvertiseDate', None),
                 int(fields.get('Custom.AnchorProject', False)),
                 int(fields.get('Custom.Complexity_Signals', False)),
                 int(fields.get('Custom.Complexity_Lighting', False)),
@@ -346,97 +340,6 @@ def insert_projects_into_db(data):
     finally:
         # Close the connection
         conn.close()
-
-# #Function to insert work items into the SQLite database table
-# def insert_projects_into_db(data):
-#     conn = sqlite3.connect(DB_NAME)
-#     cursor = conn.cursor()
-
-#     # Insert data into the table
-#     for entry in data:
-#         fields = entry['fields']
-    
-#         print(fields.get('Custom.IntermediateDate'))
-
-# # Prepare the SQL insert statement with placeholders
-#     sql_insert_statement = '''
-#         INSERT OR REPLACE INTO projects (
-#     Work_Item_ID, Area_ID, Area_Path, Team_Project, Node_Name, Area_Level_1, Revision, 
-#     Authorized_Date, Revised_Date, Iteration_ID, Iteration_Path, Iteration_Level_1, Work_Item_Type, 
-#     State, Reason_for_State_Change, Assigned_To, Person_ID, Watermark, Comment_Count, 
-#     Title, Board_Column, Is_Board_Column_Done, State_Change_Date, Business_Value, 
-#     Backlog_Priority, Health, Scoping_30_Percent, Intermediate_Date, SeventyFivePercentComplete, QAQC_Submittal_Date, 
-#     Document_Submittal_Date, Extension_Marker, Kanban_Column, Kanban_Column_Done, 
-#     EA_Number, Priority_Traffic_Ops, Fiscal_Year, Funding_Source, Route_Type, 
-#     Construction_EA_Number, Official_DOC_Date, Official_Advertise_Date, Anchor_Project, 
-#     Complexity_Signals, Complexity_Lighting, Complexity_ITS, Complexity_Power_Design, 
-#     Complexity_RoW_Coordination, Complexity_SLI_Project_Lead, Complexity_Solar_Design, 
-#     Complexity_Trunkline
-# ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?,?)'''
-
-# # Prepare the values from JSON for insertion
-#     values = (
-#         fields.get('System.Id', None),
-#     fields.get('System.AreaId', None),
-#     fields.get('System.AreaPath', ''),
-#     fields.get('System.TeamProject', ''),
-#     fields.get('System.NodeName', ''),
-#     fields.get('System.AreaLevel1', ''),
-#     fields.get('System.Rev', None),
-#     fields.get('System.AuthorizedDate', None),
-#     fields.get('System.RevisedDate', None),
-#     fields.get('System.IterationId', None),
-#     fields.get('System.IterationPath', ''),
-#     fields.get('System.IterationLevel1', ''),
-#     fields.get('System.WorkItemType', ''),
-#     fields.get('System.State', ''),
-#     fields.get('System.Reason', ''),
-#     fields.get('System.AssignedTo', {}).get('displayName', None),
-#     fields.get('System.PersonId', None),
-#     fields.get('System.Watermark', None),
-#     fields.get('System.CommentCount', None),
-#     fields.get('System.Title', ''),
-#     fields.get('System.BoardColumn', ''),
-#     int(fields.get('System.BoardColumnDone', False)),
-#     fields.get('Microsoft.VSTS.Common.StateChangeDate', None),
-#     fields.get('Microsoft.VSTS.Common.BusinessValue', None),
-#     fields.get('Microsoft.VSTS.Common.BacklogPriority', None),
-#     fields.get('Custom.Health', 'Unknown'),
-#     fields.get('Custom.30PercentScoping', None),
-#     fields.get('Custom.IntermediateDate', None),
-#     fields.get('Custom.75PercentComplete', None),
-#     fields.get('Custom.QAQCSubmittalDate', None),
-#     fields.get('Custom.DocumentSubmittalDate', None),
-#     int(fields.get('WEF_3EF069D225F848D0A794779F40639E36_System.ExtensionMarker', False)),
-#     fields.get('WEF_3EF069D225F848D0A794779F40639E36_Kanban.Column', None),
-#     int(fields.get('WEF_3EF069D225F848D0A794779F40639E36_Kanban.Column.Done', False)),
-#     fields.get('Custom.EANumber', None),
-#     fields.get('Custom.PriorityTrafficOps', None),
-#     fields.get('Custom.FiscalYear', None),
-#     fields.get('Custom.FundingSource', None),
-#     fields.get('Custom.RouteType', None),
-#     fields.get('Custom.ConstructionEANumber', None),
-#     fields.get('Custom.OfficialDOCDate', None),
-#     fields.get('Custom.OfficialAdvertiseDate', None),
-#     int(fields.get('Custom.AnchorProject', False)),
-#     int(fields.get('Custom.Complexity_Signals', False)),
-#     int(fields.get('Custom.Complexity_Lighting', False)),
-#     int(fields.get('Custom.Complexity_ITS', False)),
-#     int(fields.get('Custom.Complexity_Power_Design', False)),
-#     int(fields.get('Custom.Complexity_RoW_Coordination', False)),
-#     int(fields.get('Custom.Complexity_SLI_Project_Lead', False)),
-#     int(fields.get('Custom.Complexity_Solar_Design', False)),
-#     int(fields.get('Custom.Complexity_Trunkline', False))
-# )
-
-# # Execute the insert statement with values
-#     cursor.execute(sql_insert_statement, values)
-
-# # Commit the transaction and close the connection
-#     conn.commit()
-#     conn.close()
-
-
 
 
 # Function to insert a flattened work item into the SQLite database
@@ -635,6 +538,9 @@ async def refresh_data(work_item_type):
         pass
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
+    # Clear all records before insertion
+    cursor.execute("DELETE FROM data_refresh_log")
+
     cursor.execute("INSERT INTO data_refresh_log (last_refresh_time) VALUES (CURRENT_TIMESTAMP)")
     conn.commit()
     conn.close()  
