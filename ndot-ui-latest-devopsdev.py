@@ -1534,7 +1534,7 @@ if not st.session_state['logged_in']:
         with st.spinner("Fetching data..."):
             try:
                 # Fetch data and store in session state if needed
-                st.session_state.devops_data = asyncio.run(devopsdata.get_data_from_devops())
+                st.session_state["devops_data"] = asyncio.run(devopsdata.get_data_from_devops())
                 st.session_state['data_fetched'] = True  # Mark as fetched
                 st.popover("Data fetched successfully!")
             except Exception as e:
