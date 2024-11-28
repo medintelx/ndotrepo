@@ -12,6 +12,8 @@ from st_aggrid import AgGrid, GridOptionsBuilder, AgGridTheme, JsCode
 import datautilitydevopsdev as du
 from st_aggrid.shared import GridUpdateMode
 import devopsdataasync as devopsdata
+from pytz import timezone
+import pytz
 load_dotenv(override=True)
 st.set_page_config(layout="wide")
 
@@ -931,12 +933,18 @@ def main_application():
         styled_non_anchor_df = non_anchor_project_df.style.format(format_dict)
         st.dataframe(styled_non_anchor_df, hide_index=True)
         st.write("Data from Azure devops")
+
+
         last_refresh = get_last_refresh_time()
+        pst_tz = timezone('US/Pacific')  # Define the PST timezone
+
         if last_refresh:
+            # Assume last_refresh is in GMT; convert to PST
+            last_refresh = last_refresh.replace(tzinfo=pytz.utc).astimezone(pst_tz)
             st.markdown(
                 f"""
                 <p style='font-size:12px; color: gray;'>
-                   (Last updated at:  {last_refresh.strftime('%B %d, %Y %I:%M %p')})
+                (Last updated at:  {last_refresh.strftime('%B %d, %Y %I:%M %p %Z')})
                 </p>
                 """,
                 unsafe_allow_html=True
@@ -950,7 +958,6 @@ def main_application():
                 """,
                 unsafe_allow_html=True
             )
-        # st.button("Refresh")
 
         # Columns to filter in the final DataFrame
         columns_to_keep = [
