@@ -67,9 +67,10 @@ def sort_projects_dataframe(df):
     # Sort the dataframe based on multiple criteria including projects_complexity
     sorted_df = df.sort_values(by=[
         'projects_State',          # First priority: Project State
+        'nearest_doc_date',   # Fourth priority: Nearest Date (soonest first)
         'projects_Funding_Source', # Second priority: Funding Source
         'projects_Fiscal_Year',    # Third priority: Fiscal Year (ascending, soonest first)
-        'nearest_doc_date',   # Fourth priority: Nearest Date (soonest first)
+        
         'projects_Priority_Traffic_Ops',    # Fifth priority: Traffic Ops (descending, higher numbers first)
         'projects_Route_Type',     # Sixth priority: Route Type
         'projects_complexity'      # Seventh priority: Project Complexity (descending, higher complexity first)
@@ -623,11 +624,17 @@ def get_upcoming_sprints_with_effortpoints_and_weightage():
     today = datetime.now().strftime('%Y-%m-%d')
 
     # Query to get all upcoming sprints (where start date is greater than today's date)
+    # cursor.execute('''
+    #     SELECT Iteration, Start_date, End_date 
+    #     FROM iterations 
+    #     WHERE Start_date > ? 
+    #     ORDER BY Start_date ASC
+    # ''', (today,))
     cursor.execute('''
-        SELECT Iteration, Start_date, End_date 
-        FROM iterations 
-        WHERE Start_date > ? 
-        ORDER BY Start_date ASC
+    SELECT Iteration, Start_date, End_date 
+    FROM iterations 
+    WHERE DATE(End_date, '+2 day') > ? 
+    ORDER BY Start_date ASC
     ''', (today,))
 
     # Fetch all results
