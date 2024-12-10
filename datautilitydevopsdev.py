@@ -67,15 +67,14 @@ def sort_projects_dataframe(df):
     # Sort the dataframe based on multiple criteria including projects_complexity
     sorted_df = df.sort_values(by=[
         'projects_State',          # First priority: Project State
-        'nearest_doc_date',   # Fourth priority: Nearest Date (soonest first)
         'projects_Funding_Source', # Second priority: Funding Source
         'projects_Fiscal_Year',    # Third priority: Fiscal Year (ascending, soonest first)
-        
+        'projects_Document_Submittal_Date',
+        'nearest_doc_date',   # Fourth priority: Nearest Date (soonest first)
         'projects_Priority_Traffic_Ops',    # Fifth priority: Traffic Ops (descending, higher numbers first)
         'projects_Route_Type',     # Sixth priority: Route Type
         'projects_complexity'      # Seventh priority: Project Complexity (descending, higher complexity first)
-    ], ascending=[True, True, True, True, False, True, False])  # Adjusting the sorting order for each column
-
+    ], ascending=[True, True, True, True, True, False, True, False])  # Adjusting the sorting order for each column
     return sorted_df
 
 # working one
