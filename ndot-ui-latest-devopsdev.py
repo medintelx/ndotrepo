@@ -898,7 +898,7 @@ def main_application():
         # Update the formatting dictionary with your actual column names
         format_dict = {
             'total_effort_from_pbis': '{}', 
-            'nearest_doc_date': lambda x: pd.to_datetime(x).strftime('%m/%d/%Y') if pd.notnull(x) else '',
+            'nearest_milestone_date': lambda x: pd.to_datetime(x).strftime('%m/%d/%Y') if pd.notnull(x) else '',
             'projects_Scoping_30_Percent': lambda x: pd.to_datetime(x).strftime('%m/%d/%Y') if pd.notnull(x) else '',
             'projects_SeventyFivePercentComplete': lambda x: pd.to_datetime(x).strftime('%m/%d/%Y') if pd.notnull(x) else '',
             'projects_Intermediate_Date': lambda x: pd.to_datetime(x).strftime('%m/%d/%Y') if pd.notnull(x) else '',
@@ -906,7 +906,8 @@ def main_application():
             'projects_Document_Submittal_Date': lambda x: pd.to_datetime(x).strftime('%m/%d/%Y') if pd.notnull(x) else '',
             'projects_Official_DOC_Date': lambda x: pd.to_datetime(x).strftime('%m/%d/%Y') if pd.notnull(x) else ''
         }
-        
+         # Rename the column
+        anchor_projects_df = anchor_projects_df.rename(columns={"nearest_doc_date": "nearest_milestone_date"})
         # Apply styling to format columns
         styled_anchor_df = anchor_projects_df.style.format(format_dict)
 
@@ -928,8 +929,9 @@ def main_application():
         non_anchor_projects_df['projects_Complexity_Trunkline'] = pd.to_numeric(non_anchor_projects_df['projects_Complexity_Trunkline'], errors='coerce').fillna(0).astype(int)
         non_anchor_projects_df['projects_complexity'] = pd.to_numeric(non_anchor_projects_df['projects_complexity'], errors='coerce').fillna(0).astype(int)
         
-
-            # Apply styling to format columns
+        # Rename the column
+        non_anchor_project_df = non_anchor_project_df.rename(columns={"nearest_doc_date": "nearest_milestone_date"})
+        # Apply styling to format columns
         styled_non_anchor_df = non_anchor_project_df.style.format(format_dict)
         st.dataframe(styled_non_anchor_df, hide_index=True)
         st.write("Data from Azure devops")
