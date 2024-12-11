@@ -100,7 +100,8 @@ def distribute_epics_to_sprints(anchor_projects_df, non_anchor_projects_df, upco
 
     def allocate_epics(projects_df, project_type):
         max_effort_column = 'MaxAnchorEffortPointspersprint' if project_type == 'anchor' else 'MaxNonAnchorEffortPointspersprint'
-        last_sprint_end_date = upcoming_sprints_df['End_date'].max()
+        # last_sprint_end_date = upcoming_sprints_df['End_date'].max()
+        last_sprint_end_date = '2099-01-01 00:00:00'
         today = datetime.today()
         six_months_later = today + timedelta(days=180)
         
@@ -115,7 +116,7 @@ def distribute_epics_to_sprints(anchor_projects_df, non_anchor_projects_df, upco
                 epic_title = epic['epics_System_Title']
                 total_effort = epic['total_effort_from_pbis']
                 #Use nearest_doc_date or None
-                nearest_due_date = pd.to_datetime(epic['nearest_doc_date']) if not pd.isnull(epic['nearest_doc_date']) else last_sprint_end_date
+                nearest_due_date = pd.to_datetime(epic['nearest_doc_date']) if not pd.isnull(epic['nearest_doc_date']) else pd.to_datetime(last_sprint_end_date)
                 # Find the first available sprint that can accommodate the epic
                 # Allocate effort across sprints
                 #is_far_nearest_date = nearest_due_date and nearest_due_date > six_months_later
