@@ -906,8 +906,9 @@ def main_application():
             'projects_Document_Submittal_Date': lambda x: pd.to_datetime(x).strftime('%m/%d/%Y') if pd.notnull(x) else '',
             'projects_Official_DOC_Date': lambda x: pd.to_datetime(x).strftime('%m/%d/%Y') if pd.notnull(x) else ''
         }
-         # Rename the column
+        # Rename the column
         anchor_projects_df = anchor_projects_df.rename(columns={"nearest_doc_date": "nearest_milestone_date"})
+
         # Apply styling to format columns
         styled_anchor_df = anchor_projects_df.style.format(format_dict)
 
