@@ -20,18 +20,18 @@ st.set_page_config(layout="wide")
 DB_PATH = os.getenv('DB_PATH')
 
 
-# st.markdown("""
-#     <style>
-#         .reportview-container {
-#             margin-top: -2em;
-#         }
-#         #MainMenu {visibility: hidden;}
-#         .stDeployButton {display:none;}
-#         footer {visibility: hidden;}
-#         #stDecoration {display:none;}
-#         .stAppHeader {visibility: hidden;}
-#     </style>
-# """, unsafe_allow_html=True)
+st.markdown("""
+    <style>
+        .reportview-container {
+            margin-top: -2em;
+        }
+        #MainMenu {visibility: hidden;}
+        .stDeployButton {display:none;}
+        footer {visibility: hidden;}
+        #stDecoration {display:none;}
+        .stAppHeader {visibility: hidden;}
+    </style>
+""", unsafe_allow_html=True)
 
 login_css= """
 <style>
@@ -945,17 +945,17 @@ def main_application():
 }, inplace=True)
         
         # Get the list of columns
-        columns = list(non_anchor_projects_df.columns)
+        nacolumns = list(non_anchor_projects_df.columns)
 
         # Identify the indices of the columns to swap
-        index_75 = columns.index('75% Design Submittal Date')
-        index_60 = columns.index('Intermediate Design (60%) Submittal Date')
+        index_80 = nacolumns.index('75% Design Submittal Date')
+        index_70 = nacolumns.index('Intermediate Design (60%) Submittal Date')
 
         # Swap the two columns in the list
-        columns[index_75], columns[index_60] = columns[index_60], columns[index_75]
+        nacolumns[index_80], nacolumns[index_70] = nacolumns[index_70], nacolumns[index_80]
 
         # Reorder the DataFrame columns
-        non_anchor_projects_df = non_anchor_projects_df[columns]
+        non_anchor_projects_df = non_anchor_projects_df[nacolumns]
         st.write("Non Anchor")
         non_anchor_projects_df['projects_Fiscal_Year'] = pd.to_numeric(non_anchor_projects_df['projects_Fiscal_Year'], errors='coerce').fillna(0).astype(int)
         non_anchor_projects_df['projects_Priority_Traffic_Ops'] = pd.to_numeric(non_anchor_projects_df['projects_Priority_Traffic_Ops'], errors='coerce').fillna(0).astype(int)
@@ -974,9 +974,9 @@ def main_application():
         non_anchor_projects_df['projects_complexity'] = pd.to_numeric(non_anchor_projects_df['projects_complexity'], errors='coerce').fillna(0).astype(int)
         
         # Rename the column
-        non_anchor_project_df = non_anchor_project_df.rename(columns={"nearest_doc_date": "nearest_milestone_date"})
+        non_anchor_projects_df = non_anchor_projects_df.rename(columns={"nearest_doc_date": "nearest_milestone_date"})
         # Apply styling to format columns
-        styled_non_anchor_df = non_anchor_project_df.style.format(format_dict)
+        styled_non_anchor_df = non_anchor_projects_df.style.format(format_dict)
         st.dataframe(styled_non_anchor_df, hide_index=True)
         st.write("Data from Azure devops")
 
