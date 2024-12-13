@@ -878,6 +878,27 @@ def main_application():
     'minimumEpicPoints': 'MinimumEpicPoints'
 }, inplace=True)
         st.dataframe(upcoming_sprint_data, hide_index=True) 
+        print(anchor_projects_df.columns)
+        anchor_projects_df.rename(columns={
+    'projects_Scoping_30_Percent': 'Preliminary Design (30%) Submittal Date',
+    'projects_SeventyFivePercentComplete': '75% Design Submittal Date',
+    'projects_Intermediate_Date': 'Intermediate Design (60%) Submittal Date',
+    'projects_QAQC_Submittal_Date': 'PSE Design (90%) Submittal Date',
+    'projects_Document_Submittal_Date': 'DOC Design (100%) Submittal Date'
+}, inplace=True)
+        
+        # Get the list of columns
+        columns = list(anchor_projects_df.columns)
+
+        # Identify the indices of the columns to swap
+        index_75 = columns.index('75% Design Submittal Date')
+        index_60 = columns.index('Intermediate Design (60%) Submittal Date')
+
+        # Swap the two columns in the list
+        columns[index_75], columns[index_60] = columns[index_60], columns[index_75]
+
+        # Reorder the DataFrame columns
+        anchor_projects_df = anchor_projects_df[columns]
         st.write("Anchor")
         anchor_projects_df['projects_Fiscal_Year'] = pd.to_numeric(anchor_projects_df['projects_Fiscal_Year'], errors='coerce').fillna(0).astype(int)
         anchor_projects_df['projects_Priority_Traffic_Ops'] = pd.to_numeric(anchor_projects_df['projects_Priority_Traffic_Ops'], errors='coerce').fillna(0).astype(int)
@@ -899,13 +920,14 @@ def main_application():
         format_dict = {
             'total_effort_from_pbis': '{}', 
             'nearest_milestone_date': lambda x: pd.to_datetime(x).strftime('%m/%d/%Y') if pd.notnull(x) else '',
-            'projects_Scoping_30_Percent': lambda x: pd.to_datetime(x).strftime('%m/%d/%Y') if pd.notnull(x) else '',
-            'projects_SeventyFivePercentComplete': lambda x: pd.to_datetime(x).strftime('%m/%d/%Y') if pd.notnull(x) else '',
-            'projects_Intermediate_Date': lambda x: pd.to_datetime(x).strftime('%m/%d/%Y') if pd.notnull(x) else '',
-            'projects_QAQC_Submittal_Date': lambda x: pd.to_datetime(x).strftime('%m/%d/%Y') if pd.notnull(x) else '',
-            'projects_Document_Submittal_Date': lambda x: pd.to_datetime(x).strftime('%m/%d/%Y') if pd.notnull(x) else '',
+            'Preliminary Design (30%) Submittal Date': lambda x: pd.to_datetime(x).strftime('%m/%d/%Y') if pd.notnull(x) else '',
+            '75% Design Submittal Date': lambda x: pd.to_datetime(x).strftime('%m/%d/%Y') if pd.notnull(x) else '',
+            'Intermediate Design (60%) Submittal Date': lambda x: pd.to_datetime(x).strftime('%m/%d/%Y') if pd.notnull(x) else '',
+            'PSE Design (90%) Submittal Date': lambda x: pd.to_datetime(x).strftime('%m/%d/%Y') if pd.notnull(x) else '',
+            'DOC Design (100%) Submittal Date': lambda x: pd.to_datetime(x).strftime('%m/%d/%Y') if pd.notnull(x) else '',
             'projects_Official_DOC_Date': lambda x: pd.to_datetime(x).strftime('%m/%d/%Y') if pd.notnull(x) else ''
         }
+  
         # Rename the column
         anchor_projects_df = anchor_projects_df.rename(columns={"nearest_doc_date": "nearest_milestone_date"})
 
@@ -913,6 +935,27 @@ def main_application():
         styled_anchor_df = anchor_projects_df.style.format(format_dict)
 
         st.dataframe(styled_anchor_df, hide_index=True)
+
+        non_anchor_projects_df.rename(columns={
+    'projects_Scoping_30_Percent': 'Preliminary Design (30%) Submittal Date',
+    'projects_SeventyFivePercentComplete': '75% Design Submittal Date',
+    'projects_Intermediate_Date': 'Intermediate Design (60%) Submittal Date',
+    'projects_QAQC_Submittal_Date': 'PSE Design (90%) Submittal Date',
+    'projects_Document_Submittal_Date': 'DOC Design (100%) Submittal Date'
+}, inplace=True)
+        
+        # Get the list of columns
+        columns = list(non_anchor_projects_df.columns)
+
+        # Identify the indices of the columns to swap
+        index_75 = columns.index('75% Design Submittal Date')
+        index_60 = columns.index('Intermediate Design (60%) Submittal Date')
+
+        # Swap the two columns in the list
+        columns[index_75], columns[index_60] = columns[index_60], columns[index_75]
+
+        # Reorder the DataFrame columns
+        non_anchor_projects_df = non_anchor_projects_df[columns]
         st.write("Non Anchor")
         non_anchor_projects_df['projects_Fiscal_Year'] = pd.to_numeric(non_anchor_projects_df['projects_Fiscal_Year'], errors='coerce').fillna(0).astype(int)
         non_anchor_projects_df['projects_Priority_Traffic_Ops'] = pd.to_numeric(non_anchor_projects_df['projects_Priority_Traffic_Ops'], errors='coerce').fillna(0).astype(int)
