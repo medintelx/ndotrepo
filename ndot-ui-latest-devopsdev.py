@@ -20,18 +20,18 @@ st.set_page_config(layout="wide")
 DB_PATH = os.getenv('DB_PATH')
 
 
-st.markdown("""
-    <style>
-        .reportview-container {
-            margin-top: -2em;
-        }
-        #MainMenu {visibility: hidden;}
-        .stDeployButton {display:none;}
-        footer {visibility: hidden;}
-        #stDecoration {display:none;}
-        .stAppHeader {visibility: hidden;}
-    </style>
-""", unsafe_allow_html=True)
+# st.markdown("""
+#     <style>
+#         .reportview-container {
+#             margin-top: -2em;
+#         }
+#         #MainMenu {visibility: hidden;}
+#         .stDeployButton {display:none;}
+#         footer {visibility: hidden;}
+#         #stDecoration {display:none;}
+#         .stAppHeader {visibility: hidden;}
+#     </style>
+# """, unsafe_allow_html=True)
 
 login_css= """
 <style>
