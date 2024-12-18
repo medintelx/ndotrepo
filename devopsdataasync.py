@@ -9,6 +9,16 @@ from dotenv import load_dotenv
 
 # Load environment variables from a .env file
 load_dotenv(override=True)
+import logging
+
+# Configure logging for both file and Streamlit logs
+logging.basicConfig(
+    level=logging.INFO,  # Set the log level to control verbosity
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    handlers=[
+        logging.StreamHandler(),  # Stream logs to the console (captured by Streamlit Cloud)
+    ]
+)
 
 # Azure DevOps settings
 ORGANIZATION = os.getenv('AZURE_DEVOPS_ORGANIZATION')
@@ -516,35 +526,29 @@ async def refresh_data(work_item_type):
     start_date = datetime(2020, 1, 1)
     end_date = datetime.today()
 
-    work_item_ids = await fetch_work_item_ids(start_date, end_date, work_item_type)
+    try:
+        work_item_ids = await fetch_work_item_ids(start_date, end_date, work_item_type)
 
-    if work_item_ids:
-        id_list = [item['id'] for item in work_item_ids]
-        id_chunks = [id_list[i:i + 100] for i in range(0, len(id_list), 100)]
+        if work_item_ids:
+            id_list = [item['id'] for item in work_item_ids]
+            id_chunks = [id_list[i:i + 100] for i in range(0, len(id_list), 100)]
 
-        for chunk in id_chunks:
-            work_items = await fetch_work_item_details(chunk, work_item_type)
-            match work_item_type:
-                case "Project":
-                    print(work_items)
-                    insert_projects_into_db(work_items)
-                case "Epic":
-                    insert_epics_into_db(work_items)
-                case "Feature":
-                    insert_features_into_db(work_items)
-                case "Product Backlog Item":
-                    insert_pbis_into_db(work_items)
-    else:
-        pass
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    # Clear all records before insertion
-    cursor.execute("DELETE FROM data_refresh_log")
+            for chunk in id_chunks:
+                work_items = await fetch_work_item_details(chunk, work_item_type)
+                match work_item_type:
+                    case "Project":
+                        insert_projects_into_db(work_items)
+                    case "Epic":
+                        insert_epics_into_db(work_items)
+                    case "Feature":
+                        insert_features_into_db(work_items)
+                    case "Product Backlog Item":
+                        insert_pbis_into_db(work_items)
 
-    cursor.execute("INSERT INTO data_refresh_log (last_refresh_time) VALUES (CURRENT_TIMESTAMP)")
-    conn.commit()
-    conn.close()  
-
+        return True  # Indicate success
+    except Exception as e:
+        logging.info(f"Error during data refresh for {work_item_type}: {e}")
+        return False  # Indicate failure
 
 # Main function to fetch data from DevOps
 async def get_data_from_devops():
@@ -556,11 +560,31 @@ async def get_data_from_devops():
 
     iterations = parse_iteration_data(response)
     insert_or_update_iterations(DB_NAME, iterations)
-    print(f"Inserted {len(iterations)} iterations into the database.")
+    logging.info(f"Inserted {len(iterations)} iterations into the database.")
 
-    await refresh_data('Project')
-    await refresh_data('Epic')
-    await refresh_data('Feature')
-    await refresh_data('Product Backlog Item')
+    # Refresh data for all work item types
+    refresh_status = {
+        "Project": await refresh_data('Project'),
+        "Epic": await refresh_data('Epic'),
+        "Feature": await refresh_data('Feature'),
+        "Product Backlog Item": await refresh_data('Product Backlog Item')
+    }
+
+    # Check if all API calls were successful
+    if all(refresh_status.values()):
+        # Update the data_refresh_log table
+        logging.info(refresh_status)
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+
+        # Clear all records before insertion
+        cursor.execute("DELETE FROM data_refresh_log")
+
+        cursor.execute("INSERT INTO data_refresh_log (last_refresh_time) VALUES (CURRENT_TIMESTAMP)")
+        conn.commit()
+        conn.close()
+        logging.info("Data refresh log updated successfully.")
+    else:
+        logging.error("Some API calls failed. Data refresh log not updated.")
 
 
