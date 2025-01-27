@@ -76,6 +76,7 @@ def sort_projects_dataframe(df):
         'projects_complexity'      # Seventh priority: Project Complexity (descending, higher complexity first)
     ], ascending=[True, True, True, True, True, False, True, False])  # Adjusting the sorting order for each column
 
+
     return sorted_df
 
 
@@ -100,8 +101,7 @@ def distribute_epics_to_sprints(anchor_projects_df, non_anchor_projects_df, upco
 
     def allocate_epics(projects_df, project_type):
         max_effort_column = 'MaxAnchorEffortPointspersprint' if project_type == 'anchor' else 'MaxNonAnchorEffortPointspersprint'
-        # last_sprint_end_date = upcoming_sprints_df['End_date'].max()
-        last_sprint_end_date = '2099-01-01 00:00:00'
+        last_sprint_end_date = upcoming_sprints_df['End_date'].max()
         today = datetime.today()
         six_months_later = today + timedelta(days=180)
         
@@ -116,7 +116,7 @@ def distribute_epics_to_sprints(anchor_projects_df, non_anchor_projects_df, upco
                 epic_title = epic['epics_System_Title']
                 total_effort = epic['total_effort_from_pbis']
                 #Use nearest_doc_date or None
-                nearest_due_date = pd.to_datetime(epic['nearest_doc_date']) if not pd.isnull(epic['nearest_doc_date']) else pd.to_datetime(last_sprint_end_date)
+                nearest_due_date = pd.to_datetime(epic['nearest_doc_date']) if not pd.isnull(epic['nearest_doc_date']) else last_sprint_end_date
                 # Find the first available sprint that can accommodate the epic
                 # Allocate effort across sprints
                 #is_far_nearest_date = nearest_due_date and nearest_due_date > six_months_later
@@ -283,9 +283,7 @@ def get_project_data():
     merged_df = productbacklogitems_df.merge(features_df, left_on='pbis_System_Parent', right_on='features_system_Id', how='left') \
                                       .merge(epics_df, left_on='features_System_Parent', right_on='epics_System_Id', how='left') \
                                       .merge(projects_df, left_on='epics_System_Parent', right_on='projects_Work_Item_ID', how='left')
-    
-    current_sprint_filtered_df = merged_df[merged_df['pbis_System_IterationPath'] == 'Signals Lighting and ITS\\2024 Sprint 26']
-    current_sprint_filtered_df.to_excel('current_sprint_data.xlsx')
+
     
     # Sum efforts from product backlog items grouped by Project, Epic, and Feature, including Epic title
     aggregated_df = merged_df.groupby(
@@ -507,7 +505,7 @@ def calculate_days_overlap_exclude_weekends_and_holidays(start_date, end_date, s
         current_day += timedelta(days=1)
 
     return total_days
- 
+
 
  # Function to fetch the latest weightage configuration from the database
 def fetch_latest_config():
@@ -520,3 +518,144 @@ def fetch_latest_config():
     config = pd.read_sql(query, conn)
     conn.close()
     return config.iloc[0] if not config.empty else None
+
+def fetch_sprint_trends_data_to_df():
+    """
+    Fetch data from sprint_trends_data table joined with productbacklogitems, features, epics, 
+    and projects tables, including the anchor_project field.
+
+    Args:
+        db_path (str): Path to the SQLite database file.
+
+    Returns:
+        pd.DataFrame: DataFrame containing the joined data.
+    """
+    # Query to join tables and include anchor_project
+    query = """
+    SELECT 
+        s.id AS sprint_id,
+        s.effort AS efforts,
+        s.sprint_name AS sprint_name,
+        pbi.System_Id AS product_backlog_item_id,
+        pbi.System_Parent AS feature_parent_id,
+        f.System_Id AS feature_id,
+        f.System_Parent AS epic_parent_id,
+        e.System_Title AS epic_title,
+        e.System_Parent AS project_work_item_id,
+        pr.Work_Item_Id AS project_work_item_id_final,
+        pr.Anchor_Project AS anchor_project
+    FROM 
+        sprint_trends_data AS s
+    LEFT JOIN 
+        productbacklogitems AS pbi ON s.id = pbi.System_Id
+    LEFT JOIN 
+        features AS f ON pbi.System_Parent = f.System_Id
+    LEFT JOIN 
+        epics AS e ON f.System_Parent = e.System_Id
+    LEFT JOIN 
+        projects AS pr ON e.System_Parent = pr.Work_Item_Id
+    """
+
+    # Connect to the database and execute the query
+    conn = sqlite3.connect(db_path)
+    df = pd.read_sql_query(query, conn)
+    conn.close()
+
+    return df
+
+def classify_epic_titles(df):
+    """
+    Classify epic titles based on predefined conditions and add a new column to the DataFrame.
+
+    Args:
+        df (pd.DataFrame): DataFrame containing the epic titles.
+
+    Returns:
+        pd.DataFrame: Updated DataFrame with a new column 'epic_type'.
+    """
+    # Define the conditions for classifying epic titles
+    conditions = [
+        df['epic_title'].str.contains('QAQC|QA/QC|PS&E', case=False, na=False),
+        df['epic_title'].str.contains('30%|Preliminary', case=False, na=False),
+        df['epic_title'].str.contains('Intermediate', case=False, na=False),
+        df['epic_title'].str.contains('75%', case=False, na=False),
+        df['epic_title'].str.contains('Doc Design', case=False, na=False) &
+        ~df['epic_title'].str.contains('post', case=False, na=False)
+    ]
+
+    # Define the corresponding labels for each condition
+    labels = [
+        'QAQC/PS&E',
+        'Preliminary Design',
+        'Intermediate Design',
+        '75% Design',
+        'Document Design'
+    ]
+
+    # Add a new column 'epic_type' based on the conditions
+    df['epic_type'] = np.select(conditions, labels, default='Other')
+
+    return df
+
+ 
+def analyze_sprint_efforts(df):
+    """
+    Analyze sprint efforts to calculate anchor, non-anchor, and miscellaneous percentages for each sprint,
+    including maximum effort points in a project for both anchor and non-anchor projects.
+
+    Args:
+        df (pd.DataFrame): Input DataFrame containing sprint data.
+
+    Returns:
+        pd.DataFrame: Analysis DataFrame with anchor, non-anchor, and misc percentages for each sprint,
+                      and maximum effort points for anchor and non-anchor projects.
+    """
+    specified_epic_types = [
+        'QAQC/PS&E',
+        'Preliminary Design',
+        'Intermediate Design',
+        '75% Design',
+        'Document Design'
+    ]
+
+    # Ensure 'efforts' and 'anchor_project' columns are numeric
+    df['efforts'] = pd.to_numeric(df['efforts'], errors='coerce')
+    df['anchor_project'] = pd.to_numeric(df['anchor_project'], errors='coerce')
+
+    # Drop rows with invalid 'efforts' or 'anchor_project'
+    df = df.dropna(subset=['efforts', 'anchor_project'])
+
+    # Categorize rows based on specified epic types
+    df['category'] = df['epic_type'].apply(
+        lambda x: 'Specified' if x in specified_epic_types else 'Misc'
+    )
+
+    # Group data by sprint_name and category
+    grouped = df.groupby(['sprint_name', 'category'])
+
+    # Aggregate efforts for Specified and Misc categories
+    effort_summary = grouped.agg(
+        total_effort=('efforts', 'sum'),
+        anchor_effort=('efforts', lambda x: x[df.loc[x.index, 'anchor_project'] == 1].sum()),
+        non_anchor_effort=('efforts', lambda x: x[df.loc[x.index, 'anchor_project'] == 0].sum()),
+        max_anchor_effort=('efforts', lambda x: x[df.loc[x.index, 'anchor_project'] == 1].max()),
+        max_non_anchor_effort=('efforts', lambda x: x[df.loc[x.index, 'anchor_project'] == 0].max())
+    ).reset_index()
+
+    # Pivot the data for easier computation
+    pivot_summary = effort_summary.pivot(index='sprint_name', columns='category', values=[
+        'total_effort', 'anchor_effort', 'non_anchor_effort', 'max_anchor_effort', 'max_non_anchor_effort']).fillna(0)
+
+    # Flatten the pivot table columns
+    pivot_summary.columns = ['_'.join(col).strip() for col in pivot_summary.columns.values]
+
+    # Calculate total effort across Specified and Misc
+    pivot_summary['total_effort_all'] = pivot_summary['total_effort_Specified'] + pivot_summary['total_effort_Misc']
+
+    # Calculate percentages
+    pivot_summary['anchor_percentage_specified'] = (pivot_summary['anchor_effort_Specified'] / pivot_summary['total_effort_all']) * 100
+    pivot_summary['non_anchor_percentage_specified'] = (pivot_summary['non_anchor_effort_Specified'] / pivot_summary['total_effort_all']) * 100
+    pivot_summary['misc_percentage'] = (pivot_summary['total_effort_Misc'] / pivot_summary['total_effort_all']) * 100
+
+    # Reset index for final output
+    return pivot_summary.reset_index()
