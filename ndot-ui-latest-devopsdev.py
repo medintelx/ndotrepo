@@ -855,6 +855,7 @@ def main_application():
     
             st.session_state['selected_project_details']['Project ID'] = st.session_state['selected_project_details']['Project ID'].astype(int)
             st.dataframe(st.session_state['selected_project_details'].style.format({"Project ID": "{:.0f}", 'Total Effort Points': "{}", "Epic ID": "{:.0f}"}), hide_index=True) 
+        
 
         st.write("Upcoming Sprint Data")
 
@@ -887,6 +888,54 @@ def main_application():
     'projects_Document_Submittal_Date': 'DOC Design (100%) Submittal Date'
 }, inplace=True)
         
+        st.write("Azure Devops Trends")
+        sprint_trends = du.fetch_sprint_trends_data_to_df()
+        sprint_trends_with_type = du.classify_epic_titles(sprint_trends)
+        final_analytic_table = du.analyze_sprint_efforts(sprint_trends_with_type)
+#        # Renaming columns to have meaningful names
+        result_reordered = final_analytic_table.rename(columns={
+    'sprint_name': 'Sprint Name',
+    'total_effort_Specified': 'Total Specified Effort',
+    'anchor_effort_Specified': 'Total Anchor Efforts',
+    'non_anchor_effort_Specified': 'Total Non-Anchor Efforts',
+    'max_anchor_effort_Specified': 'Anchor Max Effort Points',
+    'max_non_anchor_effort_Specified': 'Non-Anchor Effort Max Points',
+    'total_effort_Misc': 'Total Misc Efforts',
+    'anchor_percentage_specified': 'Anchor Weight %',
+    'non_anchor_percentage_specified': 'Non-Anchor Weight %',
+    'misc_percentage': 'Miscellaneous Weight %',
+    'total_effort_all': 'Total Efforts'
+})
+        # Drop the column
+        result_reordered = result_reordered.drop(columns=['Total Specified Effort'], errors='ignore')
+
+# Define the desired order without the dropped column
+        desired_order = [
+    'Sprint Name',
+    'Total Efforts',
+    'Total Anchor Efforts',
+    'Total Non-Anchor Efforts',
+    'Total Misc Efforts',
+    'Anchor Max Effort Points',
+    'Non-Anchor Effort Max Points',
+    'Anchor Weight %',
+    'Non-Anchor Weight %',
+    'Miscellaneous Weight %'
+    
+]
+
+# Reorder the remaining columns
+        result_reordered = result_reordered[desired_order]
+                # Round percentage columns to integers
+        percentage_columns = [
+    'Anchor Weight %',
+    'Non-Anchor Weight %',
+    'Miscellaneous Weight %'
+]
+        result_reordered[percentage_columns] = result_reordered[percentage_columns].round(0).astype(int).astype(str) + ' %'
+
+        st.dataframe(result_reordered, hide_index=True)
+        st.dataframe(sprint_trends_with_type, hide_index=True)
         # Get the list of columns
         columns = list(anchor_projects_df.columns)
 
