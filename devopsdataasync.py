@@ -28,6 +28,7 @@ PAT = os.getenv('AZURE_DEVOPS_PAT')
 WIQL_URL = os.getenv('WIQL_URL')
 WORK_ITEMS_BATCH_URL = os.getenv('WORK_ITEMS_BATCH_URL')
 ITERATIONS_API_URL = os.getenv('ITERATIONS_API_URL')
+BASE_URL = os.getenv('BASE_URL')
 
 DB_NAME = os.getenv('DB_PATH')
 
@@ -69,6 +70,83 @@ async def fetch_iteration_data():
                 print(f"Failed to fetch iteration data: {response} {response.status} - {await response.text()}")
                 return None
 
+# API Request Functions
+async def get_current_sprint():
+    """Fetch current sprint details asynchronously."""
+    url = f"{BASE_URL}/_apis/work/teamsettings/iterations?api-version=7.1-preview.1"
+    async with aiohttp.ClientSession(auth=aiohttp.BasicAuth("", PAT)) as session:
+        async with session.get(url) as response:
+            response.raise_for_status()
+            data = await response.json()
+            iterations = data["value"]
+
+            for iteration in iterations:
+                print(iteration)
+                if iteration["attributes"]["timeFrame"] == "current":
+                    return iteration
+                
+            return None
+
+
+async def get_work_item_ids(iteration_path):
+    """Fetch work item IDs for the given iteration path asynchronously."""
+    url = f"{BASE_URL}/_apis/wit/wiql?api-version=7.1-preview.2"
+    query = {
+        "query": f"SELECT [System.Id] FROM WorkItems WHERE [System.IterationPath] = '{iteration_path}'"
+    }
+    async with aiohttp.ClientSession(auth=aiohttp.BasicAuth("", PAT)) as session:
+        async with session.post(url, json=query) as response:
+            response.raise_for_status()
+            data = await response.json()
+            return [item["id"] for item in data["workItems"]]
+
+async def get_work_item_details(work_item_ids):
+    """Fetch detailed information about work items asynchronously."""
+    url = f"{BASE_URL}/_apis/wit/workitemsbatch?api-version=7.1-preview.1"
+    body = {
+        "ids": work_item_ids,
+        "fields": [
+            "System.Id",
+            "System.Title",
+            "System.State",
+            "System.WorkItemType",
+            "Microsoft.VSTS.Scheduling.Effort",
+        ],
+    }
+    async with aiohttp.ClientSession(auth=aiohttp.BasicAuth("", PAT)) as session:
+        async with session.post(url, json=body) as response:
+            response.raise_for_status()
+            data = await response.json()
+            return data["value"]
+
+
+def insert_work_items_into_db(work_items, sprint_name):
+    """Insert or update work items into the SQLite database."""
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+
+    for item in work_items:
+        cursor.execute("""
+            INSERT INTO sprint_trends_data (id, title, state, type, effort, sprint_name)
+            VALUES (?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+                title=excluded.title,
+                state=excluded.state,
+                type=excluded.type,
+                effort=excluded.effort,
+                sprint_name=excluded.sprint_name,
+                modified_time=CURRENT_TIMESTAMP
+        """, (
+            item["id"],
+            item["fields"]["System.Title"],
+            item["fields"]["System.State"],
+            item["fields"]["System.WorkItemType"],
+            item["fields"].get("Microsoft.VSTS.Scheduling.Effort", None),
+            sprint_name
+        ))
+
+    conn.commit()
+    conn.close()
 
 # Asynchronous method to fetch work item IDs
 async def fetch_work_item_ids(start_date, end_date, work_item_type):
