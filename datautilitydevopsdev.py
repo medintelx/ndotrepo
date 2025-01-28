@@ -247,7 +247,7 @@ def get_project_data():
 
     productbacklogitems_query = """
     SELECT System_Id, System_IterationPath, System_WorkItemType, System_State, System_Parent, System_Title, 
-    Microsoft_VSTS_Scheduling_Effort FROM productbacklogitems;
+    Microsoft_VSTS_Scheduling_Effort FROM productbacklogitems where [System_State] IN ('New', 'Approved', 'Committed');
     """
 
       # Update with the actual path to your SQLite database
