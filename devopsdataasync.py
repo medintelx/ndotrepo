@@ -82,7 +82,7 @@ async def get_current_sprint():
             iterations = data["value"]
 
             for iteration in iterations:
-                if iteration["attributes"]["timeFrame"] == "past":
+                if iteration["attributes"]["timeFrame"] == "current":
                     return iteration
                 
             return None
