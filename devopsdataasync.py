@@ -3,9 +3,10 @@ import aiohttp
 import sqlite3
 import base64
 import os
-from datetime import datetime
+from datetime import datetime,timedelta
 from requests.auth import HTTPBasicAuth
 from dotenv import load_dotenv
+
 
 # Load environment variables from a .env file
 load_dotenv(override=True)
@@ -67,7 +68,7 @@ async def fetch_iteration_data():
             if response.status == 200:
                 return await response.json()
             else:
-                print(f"Failed to fetch iteration data: {response} {response.status} - {await response.text()}")
+                logging.info(f"Failed to fetch iteration data: {response} {response.status} - {await response.text()}")
                 return None
 
 # API Request Functions
@@ -81,8 +82,7 @@ async def get_current_sprint():
             iterations = data["value"]
 
             for iteration in iterations:
-                print(iteration)
-                if iteration["attributes"]["timeFrame"] == "current":
+                if iteration["attributes"]["timeFrame"] == "past":
                     return iteration
                 
             return None
@@ -147,35 +147,87 @@ def insert_work_items_into_db(work_items, sprint_name):
 
     conn.commit()
     conn.close()
-
 # Asynchronous method to fetch work item IDs
-async def fetch_work_item_ids(start_date, end_date, work_item_type):
-    """Fetch work item IDs asynchronously."""
-    start_date_str = start_date.strftime('%Y-%m-%d')
-    end_date_str = end_date.strftime('%Y-%m-%d')
+async def fetch_work_item_ids(start_date, end_date, work_item_type, batch_days=50):
+    """Fetch work item IDs asynchronously with batch processing for Product Backlog Items."""
+    encoded_pat = encode_pat_to_base64(PAT)
+    headers = {"Authorization": f"Basic {encoded_pat}"}
+    work_items = []
 
+    # Check if work_item_type is 'Product Backlog Item' and enable batching
     if work_item_type == 'Product Backlog Item':
-        query = {
-            "query": f"Select [System.Id] From WorkItems Where [System.WorkItemType] = '{work_item_type}' "
-                     f"And [System.CreatedDate] >= '{start_date_str}' And [System.CreatedDate] <= '{end_date_str}' "
-                     f"And [System.State] IN ('New', 'Approved', 'Committed')"
-        }
+        current_start_date = start_date
+
+        async with aiohttp.ClientSession() as session:
+            while current_start_date <= end_date:
+                # Calculate the end date for the current batch
+                current_end_date = min(current_start_date + timedelta(days=batch_days - 1), end_date)
+                start_date_str = current_start_date.strftime('%Y-%m-%d')
+                end_date_str = current_end_date.strftime('%Y-%m-%d')
+
+                query = {
+                    "query": f"Select [System.Id] From WorkItems Where [System.WorkItemType] = '{work_item_type}' "
+                             f"And [System.CreatedDate] >= '{start_date_str}' And [System.CreatedDate] <= '{end_date_str}'"
+                }
+
+                # Make the API call for the current batch
+                async with session.post(WIQL_URL, json=query, headers=headers) as response:
+                    if response.status == 200:
+                        batch_work_items = (await response.json()).get("workItems", [])
+                        work_items.extend(batch_work_items)
+                        logging.info(f"Fetched {len(batch_work_items)} items from {start_date_str} to {end_date_str}.")
+                    else:
+                        logging.info(f"Failed to fetch batch: {response.status} - {await response.text()}")
+
+                # Move to the next batch
+                current_start_date = current_end_date + timedelta(days=1)
     else:
+        # Single query for other work item types
+        start_date_str = start_date.strftime('%Y-%m-%d')
+        end_date_str = end_date.strftime('%Y-%m-%d')
+
         query = {
             "query": f"Select [System.Id] From WorkItems Where [System.WorkItemType] = '{work_item_type}' "
                      f"And [System.CreatedDate] >= '{start_date_str}' And [System.CreatedDate] <= '{end_date_str}'"
         }
 
-    encoded_pat = encode_pat_to_base64(PAT)
-    headers = {"Authorization": f"Basic {encoded_pat}"}
+        async with aiohttp.ClientSession() as session:
+            async with session.post(WIQL_URL, json=query, headers=headers) as response:
+                if response.status == 200:
+                    work_items = (await response.json()).get("workItems", [])
+                else:
+                    logging.info(f"Failed to fetch work item IDs: {response.status} - {await response.text()}")
 
-    async with aiohttp.ClientSession() as session:
-        async with session.post(WIQL_URL, json=query, headers=headers) as response:
-            if response.status == 200:
-                return (await response.json()).get("workItems", [])
-            else:
-                print(f"Failed to fetch work item IDs: {response.status} - {await response.text()}")
-                return []
+    logging.info(f"Total work items fetched: {len(work_items)}")
+    return work_items
+# # Asynchronous method to fetch work item IDs
+# async def fetch_work_item_ids(start_date, end_date, work_item_type):
+#     """Fetch work item IDs asynchronously."""
+#     start_date_str = start_date.strftime('%Y-%m-%d')
+#     end_date_str = end_date.strftime('%Y-%m-%d')
+
+#     if work_item_type == 'Product Backlog Item':
+#         query = {
+#             "query": f"Select [System.Id] From WorkItems Where [System.WorkItemType] = '{work_item_type}' "
+#                      f"And [System.CreatedDate] >= '{start_date_str}' And [System.CreatedDate] <= '{end_date_str}' "
+#                     #  f"And [System.State] IN ('New', 'Approved', 'Committed','Done')"
+#         }
+#     else:
+#         query = {
+#             "query": f"Select [System.Id] From WorkItems Where [System.WorkItemType] = '{work_item_type}' "
+#                      f"And [System.CreatedDate] >= '{start_date_str}' And [System.CreatedDate] <= '{end_date_str}'"
+#         }
+
+#     encoded_pat = encode_pat_to_base64(PAT)
+#     headers = {"Authorization": f"Basic {encoded_pat}"}
+
+#     async with aiohttp.ClientSession() as session:
+#         async with session.post(WIQL_URL, json=query, headers=headers) as response:
+#             if response.status == 200:
+#                 return (await response.json()).get("workItems", [])
+#             else:
+#                 print(f"Failed to fetch work item IDs: {response.status} - {await response.text()}")
+#                 return []
 
 
 # Asynchronous method to fetch work item details
@@ -423,7 +475,7 @@ def insert_projects_into_db(data):
         conn.commit()
 
     except sqlite3.Error as e:
-        print(f"Error inserting data into the database: {e}")
+        logging.error(f"Error inserting data into the database: {e}")
 
     finally:
         # Close the connection
@@ -601,7 +653,7 @@ def insert_pbis_into_db(data):
 # Function to refresh data by fetching and updating
 async def refresh_data(work_item_type):
     """Refresh data by fetching and updating the database asynchronously."""
-    start_date = datetime(2020, 1, 1)
+    start_date = datetime(2023, 1, 1)
     end_date = datetime.today()
 
     try:
@@ -628,6 +680,25 @@ async def refresh_data(work_item_type):
         logging.info(f"Error during data refresh for {work_item_type}: {e}")
         return False  # Indicate failure
 
+async def get_devops_sprint_details():
+    try:
+        sprint = await get_current_sprint()
+        if sprint:
+            sprint_name = sprint["name"]
+            sprint_path = sprint["path"]
+            start_date = sprint["attributes"]["startDate"]
+            end_date = sprint["attributes"]["finishDate"]
+
+            # Fetch Work Items for Sprint
+            work_item_ids = await get_work_item_ids(sprint_path)
+            num_work_items = len(work_item_ids)
+            if num_work_items > 0:
+                work_items = await get_work_item_details(work_item_ids)
+                insert_work_items_into_db(work_items, sprint_name)
+                return True
+    except Exception as e:
+        return False
+
 # Main function to fetch data from DevOps
 async def get_data_from_devops():
     """Fetch data from Azure DevOps and update the database asynchronously."""
@@ -640,12 +711,16 @@ async def get_data_from_devops():
     insert_or_update_iterations(DB_NAME, iterations)
     logging.info(f"Inserted {len(iterations)} iterations into the database.")
 
+    
+
+
     # Refresh data for all work item types
     refresh_status = {
         "Project": await refresh_data('Project'),
         "Epic": await refresh_data('Epic'),
         "Feature": await refresh_data('Feature'),
-        "Product Backlog Item": await refresh_data('Product Backlog Item')
+        "Product Backlog Item": await refresh_data('Product Backlog Item'),
+        "devopsData": await get_devops_sprint_details()
     }
 
     # Check if all API calls were successful
