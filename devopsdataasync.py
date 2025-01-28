@@ -653,7 +653,7 @@ def insert_pbis_into_db(data):
 # Function to refresh data by fetching and updating
 async def refresh_data(work_item_type):
     """Refresh data by fetching and updating the database asynchronously."""
-    start_date = datetime(2023, 1, 1)
+    start_date = datetime(2022, 1, 1)
     end_date = datetime.today()
 
     try:
