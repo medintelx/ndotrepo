@@ -935,6 +935,7 @@ def main_application():
         result_reordered[percentage_columns] = result_reordered[percentage_columns].round(0).astype(int).astype(str) + ' %'
 
         st.dataframe(result_reordered, hide_index=True)
+        st.dataframe(sprint_trends_with_type, hide_index=True)
  
         # Get the list of columns
         columns = list(anchor_projects_df.columns)
