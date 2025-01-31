@@ -653,8 +653,8 @@ def analyze_sprint_efforts(df):
     pivot_summary['total_effort_all'] = pivot_summary['total_effort_Specified'] + pivot_summary['total_effort_Misc']
 
     # Calculate percentages
-    pivot_summary['anchor_percentage_specified'] = (pivot_summary['anchor_effort_Specified'] / pivot_summary['total_effort_all']) * 100
-    pivot_summary['non_anchor_percentage_specified'] = (pivot_summary['non_anchor_effort_Specified'] / pivot_summary['total_effort_all']) * 100
+    pivot_summary['anchor_percentage_specified'] = (pivot_summary['anchor_effort_Specified'] / pivot_summary['total_effort_Specified']) * 100
+    pivot_summary['non_anchor_percentage_specified'] = (pivot_summary['non_anchor_effort_Specified'] / pivot_summary['total_effort_Specified']) * 100
     pivot_summary['misc_percentage'] = (pivot_summary['total_effort_Misc'] / pivot_summary['total_effort_all']) * 100
 
     # Reset index for final output
