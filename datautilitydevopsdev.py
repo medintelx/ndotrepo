@@ -144,7 +144,7 @@ def distribute_epics_to_sprints(anchor_projects_df, non_anchor_projects_df, upco
                         if allocated_effort > 0:
                             # Allocate the allowed effort to the last sprint
                             sprint_allocations[sprint_name][project_type].append({
-                                'project_effort': f"{int(epic['projects_EA_Number'])} ({'A' if project_type == 'anchor' else 'NA'}) - {epic_title} ({allocated_effort}) [Below Min Points]"
+                                'project_effort': f"{{int(epic['projects_EA_Number']) if epic['projects_EA_Number'] and str(epic['projects_EA_Number']).isdigit() else 'N/A'}} ({'A' if project_type == 'anchor' else 'NA'}) - {epic_title} ({allocated_effort}) [Below Min Points]"
                             })
                             sprint_allocations[sprint_name][f'remaining_{project_type}_effort'] -= allocated_effort
 
