@@ -760,7 +760,7 @@ def main_application():
         with mcol2:
         #  st.write("Project Forecast")
             df = fetch_data_from_db("Projects")
-            df = df[["Title", "State", "Anchor_Project", "Priority_Traffic_Ops","Fiscal_Year","Funding_Source","Route_Type","Scoping_30_Percent","SeventyFivePercentComplete","Intermediate_Date","QAQC_Submittal_Date","Document_Submittal_Date"]]
+            df = df[["Title", "State", "Anchor_Project","EA_Number", "Priority_Traffic_Ops","Fiscal_Year","Funding_Source","Route_Type","Scoping_30_Percent","SeventyFivePercentComplete","Intermediate_Date","QAQC_Submittal_Date","Document_Submittal_Date"]]
     
 
 
@@ -784,7 +784,6 @@ def main_application():
                 anchor_project_df, non_anchor_project_df,projects_display_df = du.get_project_data()
                 upcoming_sprint_data = du.get_upcoming_sprints_with_effortpoints_and_weightage()
                 allocation,anchor_projects_df,non_anchor_projects_df = du.distribute_epics_to_sprints(anchor_project_df, non_anchor_project_df, upcoming_sprint_data)
-                #st.write(allocation)
                 df = st.session_state.updated_forecast_df = allocation
                 #st.dataframe(st.session_state.updated_forecast_df,    hide_index=True, on_select="rerun")
                 # Display the dataframe with single-column selection enabled
@@ -809,23 +808,27 @@ def main_application():
                         if isinstance(value, str):
                             # Parse `value` for project ID, A/NA designation, epic title, and effort points
                             try:
+                                
                                 project_id = int(value.split()[0])  # Extract project ID
                                 designation = value.split("(")[1].split(")")[0]  # Extract "A" or "NA"
                                 epic_title = value.split(" - ")[1].split(" (")[0]  # Extract epic title
-
+                               
                                 # Select the relevant DataFrame based on designation
                                 relevant_df = anchor_projects_df if designation == "A" else non_anchor_projects_df
-                                
+                                # Convert 'projects_EA_Number' to integer only if value is present
+                                relevant_df['projects_EA_Number'] = pd.to_numeric(relevant_df['projects_EA_Number'], errors='coerce').astype('Int64')
+
                                 # Filter the relevant DataFrame for the selected project ID and Epic Title
                                 project_info = relevant_df[
-                                    (relevant_df['projects_Work_Item_ID'] == project_id) &
+                                    (relevant_df['projects_EA_Number'] == project_id) &
                                     (relevant_df['epics_System_Title'] == epic_title)
                                 ]
-                        
+                               
                                 # Append project details to the list if found
                                 if not project_info.empty:
                                     project_details.append({
                                         "Project ID": project_info['projects_Work_Item_ID'].values[0],
+                                        "EA Number": project_info['projects_EA_Number'].values[0],
                                         "Project Title": project_info['projects_Title'].values[0],
                                         "Epic ID": project_info['epics_System_Id'].values[0],
                                         "Epic Title": project_info['epics_System_Title'].values[0],
@@ -837,6 +840,7 @@ def main_application():
                                 st.write("Error parsing value:", value)
                                 continue
                 # Convert the list to a DataFrame
+                
                 if project_details:
                     details_df = pd.DataFrame(project_details)
                     st.session_state['selected_project_details'] = details_df 
@@ -844,7 +848,7 @@ def main_application():
     
         
     
-    
+        #st.write(anchor_projects_df)
         st.write("Epic status")
         if not st.session_state['selected_project_details'].empty:
           
@@ -932,11 +936,12 @@ def main_application():
     'Non-Anchor Weight %',
     'Miscellaneous Weight %'
 ]
-        result_reordered[percentage_columns] = result_reordered[percentage_columns].round(0).astype(int).astype(str) + ' %'
+        result_reordered[percentage_columns] = result_reordered[percentage_columns].round(1).astype(str) + ' %'
 
         st.dataframe(result_reordered, hide_index=True)
         st.dataframe(sprint_trends_with_type, hide_index=True)
- 
+
+        
         # Get the list of columns
         columns = list(anchor_projects_df.columns)
 
