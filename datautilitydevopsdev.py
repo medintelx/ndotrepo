@@ -144,7 +144,7 @@ def distribute_epics_to_sprints(anchor_projects_df, non_anchor_projects_df, upco
                         if allocated_effort > 0:
                             # Allocate the allowed effort to the last sprint
                             sprint_allocations[sprint_name][project_type].append({
-                                'project_effort': f"{int(epic['projects_Work_Item_ID'])} ({'A' if project_type == 'anchor' else 'NA'}) - {epic_title} ({allocated_effort}) [Below Min Points]"
+                                'project_effort': f"{int(epic['projects_EA_Number'])} ({'A' if project_type == 'anchor' else 'NA'}) - {epic_title} ({allocated_effort}) [Below Min Points]"
                             })
                             sprint_allocations[sprint_name][f'remaining_{project_type}_effort'] -= allocated_effort
 
@@ -184,7 +184,7 @@ def distribute_epics_to_sprints(anchor_projects_df, non_anchor_projects_df, upco
 
                     if allocated_effort > 0:
                         overdue = nearest_due_date and sprint_start_date > nearest_due_date
-                        effort_text = f"{int(epic['projects_Work_Item_ID'])} ({'A' if project_type == 'anchor' else 'NA'}) - {epic_title} ({allocated_effort}) {'[Overdue]' if overdue else ''}"
+                        effort_text = f"{int(epic['projects_EA_Number'])} ({'A' if project_type == 'anchor' else 'NA'}) - {epic_title} ({allocated_effort}) {'[Overdue]' if overdue else ''}"
                         sprint_allocations[sprint_name][project_type].append({'project_effort': effort_text, 'overdue': overdue})
                         sprint_allocations[sprint_name][f'remaining_{project_type}_effort'] -= allocated_effort
                         remaining_effort -= allocated_effort
@@ -651,6 +651,7 @@ def analyze_sprint_efforts(df):
 
     # Calculate total effort across Specified and Misc
     pivot_summary['total_effort_all'] = pivot_summary['total_effort_Specified'] + pivot_summary['total_effort_Misc']
+
 
     # Calculate percentages
     pivot_summary['anchor_percentage_specified'] = (pivot_summary['anchor_effort_Specified'] / pivot_summary['total_effort_Specified']) * 100
