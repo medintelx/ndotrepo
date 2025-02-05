@@ -184,7 +184,7 @@ def distribute_epics_to_sprints(anchor_projects_df, non_anchor_projects_df, upco
 
                     if allocated_effort > 0:
                         overdue = nearest_due_date and sprint_start_date > nearest_due_date
-                        effort_text = f"{{int(epic['projects_EA_Number']) if epic['projects_EA_Number'] and str(epic['projects_EA_Number']).isdigit() else 'N/A'}} ({'A' if project_type == 'anchor' else 'No EA Number'}) - {epic_title} ({allocated_effort}) {'[Overdue]' if overdue else ''}"
+                        effort_text = f"{{int(epic['projects_EA_Number']) if epic['projects_EA_Number'] and str(epic['projects_EA_Number']).isdigit() else 'No EA Number'}} ({'A' if project_type == 'anchor' else 'NA'}) - {epic_title} ({allocated_effort}) {'[Overdue]' if overdue else ''}"
                         sprint_allocations[sprint_name][project_type].append({'project_effort': effort_text, 'overdue': overdue})
                         sprint_allocations[sprint_name][f'remaining_{project_type}_effort'] -= allocated_effort
                         remaining_effort -= allocated_effort
