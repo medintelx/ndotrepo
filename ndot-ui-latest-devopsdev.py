@@ -1097,7 +1097,35 @@ def main_application():
             # Apply styling to format columns
         styled_filtered_data_df = filtered_data.style.format(format_project_display_dict)
         st.dataframe(styled_filtered_data_df, hide_index=True)
+        df = st.session_state.updated_forecast_df
+        # Define the keyword to search for
+        search_text = "[Overdue]"
+
+        # Create a new DataFrame with the same structure but only keeping `[Overdue]` values
+        filtered_df = df.applymap(lambda x: x if isinstance(x, str) and search_text in x else "")
+
+        # Move `[Overdue]` values to the top by sorting empty values to the bottom within each column
+        for col in filtered_df.columns:
+            non_empty_values = filtered_df[col][filtered_df[col] != ""].tolist()  # Extract `[Overdue]` values
+            filtered_df[col] = non_empty_values + [""] * (len(df) - len(non_empty_values))  # Move `[Overdue]` to the top
+
+        st.write("Overdue Epics")
+
+        st.dataframe(filtered_df, hide_index=True)
+
+        #Transpose the DataFrame
+        transposed_df = filtered_df.T.reset_index()
+
+        # Rename columns for better readability
+        transposed_df.columns = ['Sprint'] + [f'Task {i+1}' for i in range(len(transposed_df.columns)-1)]
+
+        # Concatenate all overdue tasks in each sprint into a single column "Epics"
+        transposed_df["Epics"] = transposed_df.iloc[:, 1:].apply(lambda row: ", ".join(filter(None, row)), axis=1)
+
+        # Keep only the "Sprint" and the new concatenated "Epics" column
+        final_df = transposed_df[["Sprint", "Epics"]]
         
+        st.dataframe(final_df, hide_index=True)
         
 
     elif st.session_state.page == 'Leaves':
