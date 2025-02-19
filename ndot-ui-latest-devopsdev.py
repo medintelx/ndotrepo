@@ -1109,9 +1109,9 @@ def main_application():
             non_empty_values = filtered_df[col][filtered_df[col] != ""].tolist()  # Extract `[Overdue]` values
             filtered_df[col] = non_empty_values + [""] * (len(df) - len(non_empty_values))  # Move `[Overdue]` to the top
 
-        st.write("Overdue Epics")
+        st.write("Overdue Epics:")
 
-        st.dataframe(filtered_df, hide_index=True)
+        
 
         #Transpose the DataFrame
         transposed_df = filtered_df.T.reset_index()
@@ -1125,7 +1125,7 @@ def main_application():
         # Keep only the "Sprint" and the new concatenated "Epics" column
         final_df = transposed_df[["Sprint", "Epics"]]
         
-        st.dataframe(final_df, hide_index=True)
+        st.dataframe(final_df, use_container_width=True, hide_index=True)
         
 
     elif st.session_state.page == 'Leaves':
